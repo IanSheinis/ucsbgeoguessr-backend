@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: UCSB GeoGuesser API
+  version: 1.0.0
+  description: |
+    Random image API for the UCSB GeoGuesser game.
+    
+    All successful image responses are returned as real image files (Content-Type: image/png).
+    The Lambda returns `isBase64Encoded: true`, so API Gateway delivers the actual image to the client.
+  license:
+    name: MIT
+
+servers:
+  - url: https://5tzdsxgvkd.execute-api.us-west-1.amazonaws.com/prod
+    description: Production API Gateway endpoint
+
+paths:
+  /image/random:
+    get:
+      summary: Completely random image (no exclusions)
+      description: Returns one random image from the entire S3 bucket.
+      tags:
+        - Random Images
+      responses:
+        '200':
+          description: Random image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '204':
+          description: No images in the bucket
+        '500':
+          description: Internal server error
+
+    post:
+      summary: Random image excluding a list (full bucket scan)
+      description: |
+        Returns a random image from the whole bucket, excluding the images in `exclusionList`.
+        Uses S3 ListObjects (slower for large buckets).
+      tags:
+        - Random Images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                exclusionList:
+                  type: array
+                  items:
+                    type: string
+                  example: ["UCSBGeoguesser1.jpg", "UCSBGeoguesser2.jpeg"]
+              required:
+                - exclusionList
+      responses:
+        '200':
+          description: Random image (not excluded)
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '204':
+          description: No images left after exclusions
+        '400':
+          description: Missing exclusionList
+        '500':
+          description: Internal server error
+
+  /image/category/random:
+    post:
+      summary: Random image from a specific category (with exclusions)
+      description: |
+        Returns a random image that belongs to the requested category.
+        Category matching is **case-insensitive**.
+        Uses DynamoDB GSI (fast even with many images).
+      tags:
+        - Random Images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  type: string
+                  example: "Food"
+                exclusionList:
+                  type: array
+                  items:
+                    type: string
+                  example: ["UCSBGeoguesser1.jpg"]
+              required:
+                - category
+                - exclusionList
+      responses:
+        '200':
+          description: Random image from the category
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '204':
+          description: No images left in this category after exclusions
+        '400':
+          description: Missing category or exclusionList (or bad JSON)
+        '500':
+          description: Internal server error
+
+  /image/{imgName}:
+    get:
+      summary: Get specific image by name
+      description: Returns the image with the given name from the S3 bucket.
+      tags:
+        - Images
+      parameters:
+        - name: imgName
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The name of the image file (e.g., UCSBGeoguesser1.jpg)
+      responses:
+        '200':
+          description: The requested image
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Missing imgName or no image available
+        '500':
+          description: Internal server error
+
+  /image/random/{amount}:
+    get:
+      summary: Get a list of random image names
+      description: Returns a list of random image names from the S3 bucket, based on the specified amount.
+      tags:
+        - Random Images
+      parameters:
+        - name: amount
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: The number of random image names to return (must be a positive integer)
+      responses:
+        '200':
+          description: List of random image names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["UCSBGeoguesser1.jpg", "UCSBGeoguesser2.jpeg"]
+        '204':
+          description: No images in the bucket
+        '400':
+          description: Invalid or missing amount (must be positive integer)
+        '500':
+          description: Internal server error
+
+  # ================================================
+  # CATCH-ALL / WILDCARD ROUTE
+  # ================================================
+  /{proxy+}:
+    x-amazon-apigateway-any-method:   # This tells API Gateway this applies to ALL methods
+      summary: Any undefined route
+      description: |
+        This route catches **every** URL that is not defined above.
+        When the authorizer is enabled (non-dev environments) API Gateway automatically returns 403.
+      parameters:
+        - name: proxy
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Any path that doesn't match the defined endpoints
+      responses:
+        '403':
+          description: Missing Authentication Token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Missing Authentication Token"
+              example:
+                message: "Missing Authentication Token"

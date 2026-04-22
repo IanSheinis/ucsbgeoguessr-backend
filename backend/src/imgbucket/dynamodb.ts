@@ -1,0 +1,138 @@
+/**
+ * Add bucket information to DynamoDB after clearing existing records
+ */
+import {
+  S3Client,
+  HeadObjectCommand,
+} from "@aws-sdk/client-s3";
+import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { 
+  DynamoDBDocumentClient, 
+  PutCommand, 
+  BatchWriteCommand,
+  ScanCommand
+} from "@aws-sdk/lib-dynamodb";
+
+import { getAllObjectKeys } from "../utils/bucketHelper";
+import readConfig from "../utils/config";
+
+const config = readConfig();
+const s3 = new S3Client({ region: process.env.REGION });
+const ddbClient = new DynamoDBClient({ region: process.env.REGION });
+const docClient = DynamoDBDocumentClient.from(ddbClient);
+
+/**
+ * Clears all items from the DynamoDB table
+ */
+async function clearTable(tableName: string) {
+  console.log(`Clearing all items from table: ${tableName}`);
+  
+  let lastEvaluatedKey: Record<string, any> | undefined;
+  
+  do {
+    // 1. Scan for current items (only need the keys)
+    const scanResult = await docClient.send(
+      new ScanCommand({
+        TableName: tableName,
+        ProjectionExpression: "s3Key, category", // Only fetch keys for efficiency
+        ExclusiveStartKey: lastEvaluatedKey,
+      })
+    );
+
+    const items = scanResult.Items || [];
+    if (items.length === 0) break;
+
+    // 2. Batch delete items (max 25 per request)
+    for (let i = 0; i < items.length; i += 25) {
+      const batch = items.slice(i, i + 25);
+      const deleteRequests = batch.map((item) => ({
+        DeleteRequest: {
+          Key: {
+            s3Key: item.s3Key,
+            category: item.category,
+          },
+        },
+      }));
+
+      await docClient.send(
+        new BatchWriteCommand({
+          RequestItems: {
+            [tableName]: deleteRequests,
+          },
+        })
+      );
+    }
+
+    lastEvaluatedKey = scanResult.LastEvaluatedKey;
+  } while (lastEvaluatedKey);
+  
+  console.log("Table cleared successfully.");
+}
+
+export const handler = async () => {
+  const tableName = config.BUCKET_TABLE_NAME;
+  const bucket = config.S3_BUCKET_NAME;
+
+  if (!bucket || !tableName) {
+    console.error("Missing configuration");
+    return { error: "Missing env vars" };
+  }
+
+  // === STEP 1: ERASE ALL ROWS ===
+  await clearTable(tableName);
+
+  // === STEP 2: ORIGINAL LOGIC ===
+  const objects = await getAllObjectKeys(s3, bucket);
+  if (objects.length === 0) {
+    return { updated: [], count: 0 };
+  }
+
+  const updated: string[] = [];
+
+  for (const key of objects) {
+    try {
+      const head = await s3.send(
+        new HeadObjectCommand({ Bucket: bucket, Key: key })
+      );
+
+      const metadata = head.Metadata || {};
+      const objectName = key.split("/").pop() || key;
+
+      let categories: string[] = [];
+      if (metadata.categories) {
+        try {
+          const parsed = JSON.parse(metadata.categories);
+          categories = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+          console.warn(`Bad categories JSON for ${key}`);
+        }
+      }
+
+      if (categories.length === 0) categories = ["uncategorized"];
+
+      for (const cat of categories) {
+        const categoryLower = cat.trim().toLowerCase();
+        await docClient.send(
+          new PutCommand({
+            TableName: tableName,
+            Item: {
+              s3Key: key,
+              category: categoryLower,
+              objectName,
+              categories,
+              ...metadata,
+              contentType: head.ContentType,
+              size: head.ContentLength,
+              lastModified: head.LastModified?.toISOString(),
+            },
+          })
+        );
+      }
+      updated.push(key);
+    } catch (err) {
+      console.error(`Failed to process ${key}:`, err);
+    }
+  }
+
+  return { updated, count: updated.length };
+};
