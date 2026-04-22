@@ -20,6 +20,17 @@ import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import LambdaBuilder from "../helpers/lambdaBuilder";
 import { imgConfig } from '../../assets/metadata/images';
 
+/**
+ * Api Stack 
+ * 
+ * Recursive endpoint creating endpoint infra using /src api logc:
+ *  - Lambda function
+ *  - APIGW resource
+ *  - APIGW method request/response
+ *  - APIGW integration request/response
+ *  - Request validator
+ *  - Options resource for CORS
+ */
 export class ApiStack extends Stack {
   private readonly sharedLambdaMap = new Map<string, NodejsFunction>();
   private api: apigw.RestApi;
@@ -99,11 +110,10 @@ export class ApiStack extends Stack {
       "Access-Control-Allow-Methods": "'*'",
     });
 
+    // Attach CORS headers on API Gateway's 4xx/5xx errors
     const responseTypes: Array<[string, apigateway.ResponseType]> = [
       ["Default4xx", apigateway.ResponseType.DEFAULT_4XX],
       ["Default5xx", apigateway.ResponseType.DEFAULT_5XX],
-      ["Unauthorized", apigateway.ResponseType.UNAUTHORIZED],
-      ["AccessDenied", apigateway.ResponseType.ACCESS_DENIED],
     ];
 
     responseTypes.forEach(([suffix, responseType]) => {

@@ -8,6 +8,13 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import { MetadataStackConfig } from '../helpers/config';
 import { TableV2 } from 'aws-cdk-lib/aws-dynamodb';
 
+/**
+ * MetadataStack
+ * 
+ * Deploys and always invokes metadata lambda function and update table function
+ * - metadata function: Adds metadata to s3 objects
+ * - update table function: Adds s3 objects to DDB
+ */
 export class MetadataStack extends cdk.Stack implements MetadataStackOutputs {
     constructor(scope: Construct, id: string, props: MetadataStackConfigType) {
         super(scope, id, props);
@@ -21,7 +28,7 @@ export class MetadataStack extends cdk.Stack implements MetadataStackOutputs {
 
 
   /**
-   * Lambda Function to attatch metadata
+   * Lambda Function to attatch metadata (Invoked on each deployment)
    */
   private attatchMetadata(
     props: MetadataStackConfigType,
@@ -40,8 +47,8 @@ export class MetadataStack extends cdk.Stack implements MetadataStackOutputs {
       this,
       `deployMetaData-${props.environment}`,
       {
-        fileName: "imgbucket/init.ts", //TODO change
-        timeout: cdk.Duration.seconds(600), // 10 min timeout
+        fileName: "imgbucket/init.ts", 
+        timeout: cdk.Duration.seconds(600),
       },
     )
       .setEnv(metadataLambdaEnvVars)
@@ -62,7 +69,7 @@ export class MetadataStack extends cdk.Stack implements MetadataStackOutputs {
 
     const metadataLambda = metadataLambdaBuilder.build();
 
-    // Invoke the Lambda after bucket deployment via a Custom Resource
+    // Use a timestamp to always invoke deployment (previously cdk wasn't detecting if metadata changed)
     const runTimestamp = Date.now().toString();
 
     const invokeMetadata = new AwsCustomResource(this, `InvokeMetadata-${props.environment}`, {
@@ -163,7 +170,7 @@ export class MetadataStack extends cdk.Stack implements MetadataStackOutputs {
 
     const lambda = lambdaBuilder.build();
 
-    // Invoke after bucket is ready
+    // Use a timestamp to always invoke deployment (previously cdk wasn't detecting if metadata changed)
     const runTimestamp = Date.now().toString();
     const invokeTableLambda = new AwsCustomResource(this, `InvokeBucketTableLambda-${props.environment}`, {
       onCreate: {

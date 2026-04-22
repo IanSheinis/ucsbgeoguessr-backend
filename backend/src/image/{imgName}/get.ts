@@ -1,7 +1,6 @@
 /**
  * Retrieve a random image from the s3 bucket, no exclusion implemented here
  */
-import { ApiGateway } from "aws-cdk-lib/aws-events-targets";
 import {
   APIGatewayProxyEvent,
   APIGatewayProxyResult,
@@ -12,12 +11,7 @@ import { logger } from "../../../logger";
 import readConfig from "../../utils/config";
 import {
   S3Client,
-  ListObjectsV2Command,
-  HeadObjectCommand,
-  CopyObjectCommand,
-  GetObjectCommand,
 } from "@aws-sdk/client-s3";
-import { getRandomElement } from "../../utils/helpers";
 import { fetchBase64, getAllObjectKeys } from "../../utils/bucketHelper";
 
 /**

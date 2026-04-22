@@ -1,5 +1,8 @@
 import { APIGatewayProxyResult } from "aws-lambda";
 
+/**
+ * APIGW util functions
+ */
 export function parseEventBody(event: any): Record<string, any> {
   let body = event.body;
   if (!body) return {};

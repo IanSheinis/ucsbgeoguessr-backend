@@ -12,10 +12,6 @@ import { logger } from "../../../logger";
 import readConfig from "../../utils/config";
 import {
   S3Client,
-  ListObjectsV2Command,
-  HeadObjectCommand,
-  CopyObjectCommand,
-  GetObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getRandomElement } from "../../utils/helpers";
 import { fetchBase64, getAllObjectKeys } from "../../utils/bucketHelper";

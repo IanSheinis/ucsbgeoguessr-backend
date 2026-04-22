@@ -48,11 +48,6 @@ export const handler = async (
     const {category, exclusionList} = body;
 
     console.log('body: ' + JSON.stringify(body))
-    if (!category) {
-      return ResponseHandler.badRequest("Missing 'category' query parameter");
-    }
-
-    const categoryLower = category.toLowerCase();
 
     if (exclusionList == undefined) {
       return ResponseHandler.badRequest("Missing 'exclusionList' query parameter");
@@ -68,13 +63,20 @@ export const handler = async (
       return ResponseHandler.internalServerError("Table name not configured");
     }
 
+    if (!category) {
+      return ResponseHandler.badRequest("Missing 'category' query parameter");
+    }
+
+    const categoryLower = category.toLowerCase();
+
+    // DDB query expression
     const result = await docClient.send(
       new QueryCommand({
         TableName: tableName,
-        IndexName: "by-category",                    // ← our GSI
+        IndexName: "by-category", // GSI
         KeyConditionExpression: "category = :cat",
         ExpressionAttributeValues: {
-          ":cat": categoryLower,
+          ":cat": categoryLower, // Replace :cat with categoryLower (good practice for injection attacks)
         },
         // Optional: sort by s3Key (alphabetical)
         ScanIndexForward: true,
@@ -83,7 +85,7 @@ export const handler = async (
 
     // Turn object Name into list of objects
     const objects = (result.Items ?? [])
-    .filter(item => !!item.objectName)           // skip items without objectName
+    .filter(item => !!item.objectName)  // skip items without objectName
     .map(item => item.objectName!);
 
     const excludedObjects = removeExcluded(objects, exclusionList);

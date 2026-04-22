@@ -1,9 +1,13 @@
-import * as fs from "fs";
-import * as path from "path";
 import {
   LambdaEnvVariables,
 } from "./types";
+/**
+ * Config file to get env var's passed into lambda
+ */
 
+/**
+ * Functions to make error handling of env var's recursive
+ */
 export function getRequiredEnv(key: string): string {
   const value = process.env[key];
   if (!value) {
@@ -35,6 +39,9 @@ function getOptionalEnvInt(key: string, defaultValue: number): number {
   return isNaN(parsed) ? defaultValue : parsed;
 }
 
+/**
+ * Checks for Winston log level
+ */
 function checkLogLevel(
   logLevel: string,
 ): "error" | "warn" | "info" | "verbose" | "debug" | "silly" {
@@ -46,19 +53,6 @@ function checkLogLevel(
   }
 
   return logLevel as "error" | "warn" | "info" | "verbose" | "debug" | "silly";
-}
-function coalesceEnv(
-  primary: string,
-  fallback: string | undefined,
-  defaultValue = "",
-): string {
-  if (process.env[primary] !== undefined) {
-    return process.env[primary] ?? "";
-  }
-  if (fallback !== undefined) {
-    return fallback;
-  }
-  return defaultValue;
 }
 
 

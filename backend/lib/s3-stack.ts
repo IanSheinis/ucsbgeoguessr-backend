@@ -7,6 +7,8 @@ import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { S3StackConfig } from '../helpers/config';
 
 /**
+ * S3 Stack
+ * 
  * Create the object oriented storage which will allow UCSBGeoguesser to store images w/ metadata in
  * S3StackOutputs is the outputs (exported variables) that will go to other stacks/files
  */
