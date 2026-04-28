@@ -1,4 +1,6 @@
+# Configuring OpenID Connect in Amazon Web Services
 # https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws
+
 name: CI/CD pipeline
 on:
   push: 

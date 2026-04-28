@@ -4,7 +4,6 @@ import {ImageConfig} from "../../backend/helpers/types"
  * Used this website to get lat and long https://www.gps-coordinates.net/
  *
  * If changing metadata configuration here change it in backend/imgBucket/init also
- * DO NOT ADD IMAGES CAN NOT BE OVER 5MB, compress them if you have to
  */
 
 
