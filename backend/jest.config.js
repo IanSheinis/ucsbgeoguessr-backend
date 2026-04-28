@@ -1,3 +1,4 @@
+// Default aws cdk jest config
 module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/test'],

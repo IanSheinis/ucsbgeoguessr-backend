@@ -47,6 +47,8 @@ export class ApiStack extends Stack {
     const imageBucketName = Fn.importValue(`${props.environment}-image-bucket-name`);
     const imageBucketARN = Fn.importValue(`${props.environment}-image-bucket-arn`);
     const bucketTableName = Fn.importValue( `${props.environment}-BucketTableName`);
+
+    // Environment variables for lambda functions created by the infrastructure function
     const LambdaEnvVars: LambdaEnvVariables = {
       REGION: props.region,
       LOG_LEVEL: "debug", // TODO change to be from config
@@ -56,13 +58,16 @@ export class ApiStack extends Stack {
     }
 
 
+    // Recursively create infrastructure
     endpointList.forEach((config) => {
       this.createEndpoint(props, config, LambdaEnvVars);
     });
 
   }
 
-
+  /**
+   * Creates endpoint infrastructure
+   */
   private createApiGateway(
     scope: Construct,
     props: ApiStackConfig,

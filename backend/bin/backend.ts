@@ -12,6 +12,8 @@ import { MetadataStack } from "../lib/metadata-stack";
 const account = process.env["ACCOUNT"];
 const region = process.env["REGION"];
 const app = new cdk.App();
+
+// Create S3 for images and metadata
 const s3Stack = new S3Stack(app, `S3Stack-${GeneralConfig.environment}`, {
   ...S3StackConfig,
   description: `${GeneralConfig.app_name} S3 backend infrastructure stack for ${GeneralConfig.environment} environment`,
@@ -25,6 +27,7 @@ const s3Stack = new S3Stack(app, `S3Stack-${GeneralConfig.environment}`, {
   }
 });
 
+// Create DDB for categories and metadata
 const dynamoDBStack = new DynamoDBStack(app, `DynamoDBStack-${GeneralConfig.environment}`, {
   ...S3StackConfig,
   description: `${GeneralConfig.app_name} dynammoDB backend infrastructure stack for ${GeneralConfig.environment} environment`,
