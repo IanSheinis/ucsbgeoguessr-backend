@@ -6,5 +6,8 @@
   },
   "scripts": {
     "test": "jest"
+  },
+  "dependencies": {
+    "fs-extra": "^11.3.4"
   }
 }
