@@ -14,7 +14,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 ### Config ###
-IMG_COUNT = 1      # Image query count
+IMG_COUNT = 2      # Image query count
 IMG_WIDTH = 1024    # Image pixel width
 USER_AGENT = os.environ["USER_AGENT"]  # required by Wikimedia
 IMAGES_DIR = "images"
@@ -31,16 +31,16 @@ Show: image, coordinate location, country
 
 Added DISTINCT after Query Builder created my Query to prevent duplicate img names
 """
-query = """
+query = query = f"""
 SELECT DISTINCT ?tourist_attraction ?tourist_attractionLabel ?image ?coordinate_location ?country ?countryLabel 
-WHERE {
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }
+WHERE {{
+  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "[AUTO_LANGUAGE],mul,en". }}
   ?tourist_attraction wdt:P31 wd:Q570116.
-  OPTIONAL { ?tourist_attraction wdt:P18 ?image. }
-  OPTIONAL { ?tourist_attraction wdt:P625 ?coordinate_location. }
-  OPTIONAL { ?tourist_attraction wdt:P17 ?country. }
-}
-LIMIT 1
+  OPTIONAL {{ ?tourist_attraction wdt:P18 ?image. }}
+  OPTIONAL {{ ?tourist_attraction wdt:P625 ?coordinate_location. }}
+  OPTIONAL {{ ?tourist_attraction wdt:P17 ?country. }}
+}}
+LIMIT {IMG_COUNT}
 """
 
 data_extracter = WikiDataQueryResults(query, USER_AGENT)
