@@ -12,10 +12,12 @@ https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service/Query_Helper
 
 from lib.wiki_data_query_results import WikiDataQueryResults
 from lib.image_download import download_image
+from lib.json_add import add_to_json
 from urllib.parse import unquote
 import os
 from dotenv import load_dotenv
 from pathlib import Path
+import time
 
 load_dotenv()
 
@@ -23,13 +25,13 @@ load_dotenv()
 IMG_COUNT = 2      # Image query count
 IMG_WIDTH = 1024    # Image pixel width
 USER_AGENT = os.environ["USER_AGENT"]  # required by Wikimedia
-METADATA_DIR = "metadata"
 REQUEST_DELAY_SEC = 1.0       # be polite to Wikimedia servers
 
 SCRIPT_DIR = Path(__file__).parent
 ASSETS_DIR = SCRIPT_DIR.parent
 IMAGES_DIR = ASSETS_DIR / "images"
 METADATA_DIR = ASSETS_DIR / "metadata"
+METADATA_FILE = METADATA_DIR / "images.json"
 
 """
 From SPARQL Query Builder: https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service/Query_Helper
@@ -69,12 +71,31 @@ countryLabel — human-readable country name
 """
 # Loop through metadata, download the image and add it to ../images, then add the corresponding metadata to ../metadata
 for row in tourist_attractions:
-    metadata = [] # metadata obj
-    print(row)
-
-    # Add image to /images
     img_url = row["image"]
-    img_name = unquote(img_url.rsplit("/", 1)[-1]) # Extract img name from img url
+    img_name = unquote(img_url.rsplit("/", 1)[-1])
+    
+    # Add image to /images
     download_image(img_url, str(IMAGES_DIR / img_name), USER_AGENT)
-
-    # Add metadata to /metadata
+    
+    # Parse coords from "Point(lon lat)"
+    coords = row["coordinate_location"].replace("Point(", "").replace(")", "")
+    lon, lat = coords.split()
+    
+    # Build metadata entry 
+    entry = {
+        "imgName": img_name,
+        "Location": row["tourist_attractionLabel"],
+        "Latitude": lat,
+        "Longitude": lon,
+        "Categories": [row["countryLabel"]],
+    }
+    
+    # Add to metadata file (skips if imgName already exists)
+    added = add_to_json(METADATA_FILE, entry)
+    if added:
+        print(f"Added {img_name}")
+    else:
+        print(f"Skipped {img_name} (already in config)")
+    
+    # Be polite to Wikimedia servers
+    time.sleep(REQUEST_DELAY_SEC)
