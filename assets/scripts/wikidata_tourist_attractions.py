@@ -22,7 +22,7 @@ import time
 load_dotenv()
 
 ### Config ###
-IMG_COUNT = 2      # Image query count
+IMG_COUNT = 1      # Image query count
 IMG_WIDTH = 1024    # Image pixel width
 USER_AGENT = os.environ["USER_AGENT"]  # required by Wikimedia
 REQUEST_DELAY_SEC = 1.0       # be polite to Wikimedia servers

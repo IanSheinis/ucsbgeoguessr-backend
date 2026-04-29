@@ -45,7 +45,7 @@ export interface ImageConfig {
     Location: string,
     Latitude: string,
     Longitude: string,
-    Categories: string
+    Categories: string[]
 }
 
 export interface LambdaBuilderConfig {

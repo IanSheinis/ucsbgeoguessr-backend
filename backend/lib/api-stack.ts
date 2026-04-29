@@ -18,7 +18,6 @@ import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { endpointList } from "../helpers/config";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import LambdaBuilder from "../helpers/lambdaBuilder";
-import { imgConfig } from '../../assets/metadata/images';
 
 /**
  * Api Stack 

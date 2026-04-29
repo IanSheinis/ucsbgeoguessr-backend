@@ -10,7 +10,7 @@ import {
 } from "@aws-sdk/client-s3";
 import { getAllObjectKeys } from "../utils/bucketHelper";
 import readConfig from "../utils/config";
-import { imgConfig } from "../../../assets/metadata/images";
+import imgConfig from "../../../assets/metadata/images.json";
 
 const config = readConfig();
 const s3 = new S3Client({ region: process.env.REGION });
@@ -49,7 +49,7 @@ export const handler = async () => {
       Location: config.Location,
       Latitude: config.Latitude,
       Longitude: config.Longitude,
-      Categories: config.Categories
+      Categories: JSON.stringify(config.Categories)
     };
 
     // Copy object to itself with updated metadata

@@ -1,0 +1,359 @@
+github-dev
+Description: ucsbgeoguesser RestAPI infrastructure stack for github-dev environment
+Resources:
+  deployMetaDatagithubdevFnServiceRole2BC0AC58:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/deployMetaData-github-devFn/ServiceRole/Resource
+  deployMetaDatagithubdevFnServiceRoleDefaultPolicy9DCB8FE5:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - s3:GetObject
+              - s3:PutObject
+            Effect: Allow
+            Resource:
+              Fn::Join:
+                - ""
+                - - Fn::ImportValue: github-dev-image-bucket-arn
+                  - /*
+          - Action: s3:ListBucket
+            Effect: Allow
+            Resource:
+              Fn::ImportValue: github-dev-image-bucket-arn
+          - Action:
+              - xray:PutTelemetryRecords
+              - xray:PutTraceSegments
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: deployMetaDatagithubdevFnServiceRoleDefaultPolicy9DCB8FE5
+      Roles:
+        - Ref: deployMetaDatagithubdevFnServiceRole2BC0AC58
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/deployMetaData-github-devFn/ServiceRole/DefaultPolicy/Resource
+  deployMetaDatagithubdevFn196E4EC2:
+    Type: AWS::Lambda::Function
+    Properties:
+      Architectures:
+        - arm64
+      Code:
+        S3Bucket: cdk-hnb659fds-assets-723136737732-us-west-1
+        S3Key: 6f44294f725ebeba2c848b257f6fc848674162d71a02ad62d0cdaafcea199d3d.zip
+      Description: ""
+      Environment:
+        Variables:
+          REGION: us-west-1
+          LOG_LEVEL: debug
+          S3_BUCKET_NAME:
+            Fn::ImportValue: github-dev-image-bucket-name
+      FunctionName: deployMetaData-github-dev
+      Handler: index.handler
+      LoggingConfig:
+        ApplicationLogLevel: INFO
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+          - deployMetaDatagithubdevFnServiceRole2BC0AC58
+          - Arn
+      Runtime: nodejs22.x
+      Timeout: 600
+      TracingConfig:
+        Mode: Active
+    DependsOn:
+      - deployMetaDatagithubdevFnServiceRoleDefaultPolicy9DCB8FE5
+      - deployMetaDatagithubdevFnServiceRole2BC0AC58
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/deployMetaData-github-devFn/Resource
+      aws:asset:path: asset.6f44294f725ebeba2c848b257f6fc848674162d71a02ad62d0cdaafcea199d3d
+      aws:asset:is-bundled: true
+      aws:asset:property: Code
+  InvokeMetadatagithubdev159E7124:
+    Type: Custom::AWS
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - AWS679f53fac002430cb0da5b7982bd22872D164C4C
+          - Arn
+      Create:
+        Fn::Join:
+          - ""
+          - - '{"service":"Lambda","action":"invoke","parameters":{"FunctionName":"'
+            - Ref: deployMetaDatagithubdevFn196E4EC2
+            - '","InvocationType":"RequestResponse"},"physicalResourceId":{"id":"'
+            - Fn::ImportValue: github-dev-image-bucket-name
+            - -metadata-1777484712854"}}
+      Update:
+        Fn::Join:
+          - ""
+          - - '{"service":"Lambda","action":"invoke","parameters":{"FunctionName":"'
+            - Ref: deployMetaDatagithubdevFn196E4EC2
+            - '","InvocationType":"RequestResponse"},"physicalResourceId":{"id":"'
+            - Fn::ImportValue: github-dev-image-bucket-name
+            - -metadata-1777484712854"}}
+      InstallLatestAwsSdk: false
+    DependsOn:
+      - deployMetaDatagithubdevFn196E4EC2
+      - deployMetaDatagithubdevFnServiceRoleDefaultPolicy9DCB8FE5
+      - deployMetaDatagithubdevFnServiceRole2BC0AC58
+      - InvokeMetadatagithubdevCustomResourcePolicy07035E3D
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/InvokeMetadata-github-dev/Resource/Default
+  InvokeMetadatagithubdevCustomResourcePolicy07035E3D:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: lambda:InvokeFunction
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - deployMetaDatagithubdevFn196E4EC2
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: InvokeMetadatagithubdevCustomResourcePolicy07035E3D
+      Roles:
+        - Ref: AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2
+    DependsOn:
+      - deployMetaDatagithubdevFn196E4EC2
+      - deployMetaDatagithubdevFnServiceRoleDefaultPolicy9DCB8FE5
+      - deployMetaDatagithubdevFnServiceRole2BC0AC58
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/InvokeMetadata-github-dev/CustomResourcePolicy/Resource
+  AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/AWS679f53fac002430cb0da5b7982bd2287/ServiceRole/Resource
+  AWS679f53fac002430cb0da5b7982bd22872D164C4C:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: cdk-hnb659fds-assets-723136737732-us-west-1
+        S3Key: 34a66902956b031404ef497526f619b900363fe7fd65ff02b1de4c30fe10c034.zip
+      Handler: index.handler
+      Role:
+        Fn::GetAtt:
+          - AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2
+          - Arn
+      Runtime: nodejs22.x
+      Timeout: 120
+    DependsOn:
+      - AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/AWS679f53fac002430cb0da5b7982bd2287/Resource
+      aws:asset:path: asset.34a66902956b031404ef497526f619b900363fe7fd65ff02b1de4c30fe10c034
+      aws:asset:is-bundled: false
+      aws:asset:property: Code
+  AWS679f53fac002430cb0da5b7982bd2287LogGroup449FB7C2:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName:
+        Fn::Join:
+          - ""
+          - - /aws/lambda/
+            - Ref: AWS679f53fac002430cb0da5b7982bd22872D164C4C
+      RetentionInDays: 731
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/AWS679f53fac002430cb0da5b7982bd2287/LogGroup/Resource
+  deployBucketTablegithubdevFnServiceRole8909334E:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/deployBucketTable-github-devFn/ServiceRole/Resource
+  deployBucketTablegithubdevFnServiceRoleDefaultPolicy3E1AE6F0:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: s3:ListBucket
+            Effect: Allow
+            Resource:
+              Fn::ImportValue: github-dev-image-bucket-arn
+          - Action: s3:GetObject
+            Effect: Allow
+            Resource:
+              Fn::Join:
+                - ""
+                - - Fn::ImportValue: github-dev-image-bucket-arn
+                  - /*
+          - Action:
+              - dynamodb:BatchWriteItem
+              - dynamodb:DeleteItem
+              - dynamodb:PutItem
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+            Effect: Allow
+            Resource:
+              - Fn::ImportValue: github-dev-BucketTableArn
+              - Fn::Join:
+                  - ""
+                  - - Fn::ImportValue: github-dev-BucketTableArn
+                    - /index/by-category
+          - Action:
+              - xray:PutTelemetryRecords
+              - xray:PutTraceSegments
+            Effect: Allow
+            Resource: "*"
+        Version: "2012-10-17"
+      PolicyName: deployBucketTablegithubdevFnServiceRoleDefaultPolicy3E1AE6F0
+      Roles:
+        - Ref: deployBucketTablegithubdevFnServiceRole8909334E
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/deployBucketTable-github-devFn/ServiceRole/DefaultPolicy/Resource
+  deployBucketTablegithubdevFn01A0C658:
+    Type: AWS::Lambda::Function
+    Properties:
+      Architectures:
+        - arm64
+      Code:
+        S3Bucket: cdk-hnb659fds-assets-723136737732-us-west-1
+        S3Key: 66bbff666f8fcd953aa782645d7d59841806063c924c7f6ddfb264c073eecfbc.zip
+      Description: ""
+      Environment:
+        Variables:
+          REGION: us-west-1
+          LOG_LEVEL: debug
+          S3_BUCKET_NAME:
+            Fn::ImportValue: github-dev-image-bucket-name
+          BUCKET_TABLE_NAME:
+            Fn::ImportValue: github-dev-BucketTableName
+      FunctionName: deployBucketTable-github-dev
+      Handler: index.handler
+      LoggingConfig:
+        ApplicationLogLevel: INFO
+        LogFormat: JSON
+        SystemLogLevel: INFO
+      MemorySize: 256
+      Role:
+        Fn::GetAtt:
+          - deployBucketTablegithubdevFnServiceRole8909334E
+          - Arn
+      Runtime: nodejs22.x
+      Timeout: 600
+      TracingConfig:
+        Mode: Active
+    DependsOn:
+      - deployBucketTablegithubdevFnServiceRoleDefaultPolicy3E1AE6F0
+      - deployBucketTablegithubdevFnServiceRole8909334E
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/deployBucketTable-github-devFn/Resource
+      aws:asset:path: asset.66bbff666f8fcd953aa782645d7d59841806063c924c7f6ddfb264c073eecfbc
+      aws:asset:is-bundled: true
+      aws:asset:property: Code
+  InvokeBucketTableLambdagithubdevD061C789:
+    Type: Custom::AWS
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+          - AWS679f53fac002430cb0da5b7982bd22872D164C4C
+          - Arn
+      Create:
+        Fn::Join:
+          - ""
+          - - '{"service":"Lambda","action":"invoke","parameters":{"FunctionName":"'
+            - Ref: deployBucketTablegithubdevFn01A0C658
+            - '","InvocationType":"RequestResponse","Payload":"{}"},"physicalResourceId":{"id":"'
+            - Fn::ImportValue: github-dev-image-bucket-name
+            - -table-init-1777484713319"}}
+      Update:
+        Fn::Join:
+          - ""
+          - - '{"service":"Lambda","action":"invoke","parameters":{"FunctionName":"'
+            - Ref: deployBucketTablegithubdevFn01A0C658
+            - '","InvocationType":"RequestResponse","Payload":"{}"},"physicalResourceId":{"id":"'
+            - Fn::ImportValue: github-dev-image-bucket-name
+            - -table-init-1777484713319"}}
+      InstallLatestAwsSdk: false
+    DependsOn:
+      - InvokeBucketTableLambdagithubdevCustomResourcePolicyAE40FA8F
+      - InvokeMetadatagithubdevCustomResourcePolicy07035E3D
+      - InvokeMetadatagithubdev159E7124
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/InvokeBucketTableLambda-github-dev/Resource/Default
+  InvokeBucketTableLambdagithubdevCustomResourcePolicyAE40FA8F:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action: lambda:InvokeFunction
+            Effect: Allow
+            Resource:
+              Fn::GetAtt:
+                - deployBucketTablegithubdevFn01A0C658
+                - Arn
+        Version: "2012-10-17"
+      PolicyName: InvokeBucketTableLambdagithubdevCustomResourcePolicyAE40FA8F
+      Roles:
+        - Ref: AWS679f53fac002430cb0da5b7982bd2287ServiceRoleC1EA0FF2
+    DependsOn:
+      - InvokeMetadatagithubdevCustomResourcePolicy07035E3D
+      - InvokeMetadatagithubdev159E7124
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/InvokeBucketTableLambda-github-dev/CustomResourcePolicy/Resource
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/+1W32vbMBD+W6rHonptymD0LSlkdKRpqMteggkX6eqokSWjH+ky4/99yJG9ZG3KuoesbAWD7O9Od/fdyXfqJb2zj8npETzaE8aXJ1LMkyp1wJYUHu2sklDMOcyU5vhgk3GzDL1iTmg1rQgqZ9bkghwTSu4jPIYCI8SxtCPNlkMhcQJuEeG5V1wKlZOLijgwObooCG6uNfcSbUTwm0OjQO6iUgNH03zUlDgDrLFG+syJFRJKjFdOdGGAYQvhkDlvWmgBistogpKgq30bhVDCCZATLQVbd0wsM6IM/CJSYKHNOhXfsQsqz4XKh9oUEEx9SW/GhBK7tg6Lkc5HuEL5tUcuyNV4eBPCKkspGASbz4lRrYTRqkDVBsY0x0i66p73GhywBu/5fhNn/r0MBz72GRVQJNWtljitCFjrC+SDdchiaYRiogTZZ0z7rm4bnbChz7rQa0oKUJAjbxiKkNVptYOt+ybqZqHKwPmdnrQu2rxMqyh1DtjiSkmhsJORY/Ibwpftviw9IP0/J/if12i/NKOX9yqQphs4+OtCudNB8iTCpzDnqQOH4RexO25fAdstLA6XfQZeEdxfo3NIlk0RN/WrqT2fgbXobNIPC7XnycCzJboBWJxmdHOJTarLe9XeXWkqVC7RabV1m/Ve8LajNlsm3pTa4r62u9u7TRNe248/G+3L/eNpVbKfb6mfK3TthOkm3q+jYnuyxCxeowMODjZpoc54zJ4Xtcn85zlmdKuib4pOVlOpc5tUo+hrWnVuOz+bk91q1DW9Rau9YdgybFjS5qCnDsLYp8xbp4uZiZo26T/aywZrN9Pdzy5bTSuMYE3DHSh5sB9WvV5y9ik5PXqwQpxEDsntZv0Btl3axTIOAAA=
+    Metadata:
+      aws:cdk:path: MetadataStack-github-dev/CDKMetadata/Default
+Parameters:
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+

@@ -1,12 +1,10 @@
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { ImageConfig, LambdaEnvVariables, MetadataStackConfigType, MetadataStackOutputs } from '../helpers/types';
-import { imgConfig } from '../../assets/metadata/images';
+import imgConfig from "../../assets/metadata/images.json";
 import { AwsCustomResource, AwsCustomResourcePolicy, PhysicalResourceId } from 'aws-cdk-lib/custom-resources';
 import LambdaBuilder from '../helpers/lambdaBuilder';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import { MetadataStackConfig } from '../helpers/config';
-import { TableV2 } from 'aws-cdk-lib/aws-dynamodb';
 
 /**
  * MetadataStack
@@ -201,6 +199,23 @@ export class MetadataStack extends cdk.Stack implements MetadataStackOutputs {
           resources: [lambda.functionArn],
         }),
       ]),
+      // Needs a sep iam role as it shares a role with bucket deployment by default
+      role: new iam.Role(this, 'InvokeBucketTableRole', {
+        assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+        managedPolicies: [
+          iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+        ],
+        inlinePolicies: {
+          InvokeLambda: new iam.PolicyDocument({
+            statements: [
+              new iam.PolicyStatement({
+                actions: ['lambda:InvokeFunction'],
+                resources: [lambda.functionArn],
+              }),
+            ],
+          }),
+        },
+      }),
     });
 
     invokeTableLambda.node.addDependency(precedingResource);
