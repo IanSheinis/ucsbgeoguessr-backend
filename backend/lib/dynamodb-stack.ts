@@ -10,21 +10,20 @@ export class DynamoDBStack extends cdk.Stack implements DynamoDBStackOutputs {
   constructor(scope: Construct, id: string, props: DynamoDBStackConfigType) {
     super(scope, id, props);
 
-    // In case we want faster lookups we switch to dynamodb instead of s3
+    // Table w/ metadata per image
     const bucketTable = new TableV2(this, 'S3ObjectsTable', {   
       tableName: `${props.environment}-s3-objects`,                                 
 
       partitionKey: { name: 's3Key', type: AttributeType.STRING },
-      sortKey:      { name: 'category', type: AttributeType.STRING },
       billing: Billing.onDemand(),
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // GSI to query objects by category
+    // GSI to query randomly by category (ddb[i % category.size])
     bucketTable.addGlobalSecondaryIndex({
-      indexName: 'by-category',
-      partitionKey: { name: 'category', type: AttributeType.STRING },   
-      sortKey:      { name: 's3Key',    type: AttributeType.STRING },
+      indexName: 'by-category-index',
+      partitionKey: { name: 'category', type: AttributeType.STRING },
+      sortKey: { name: 'index', type: AttributeType.NUMBER }, // numeric SK!
     });
 
     this.BucketTableName = bucketTable.tableName;  

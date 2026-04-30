@@ -13,8 +13,7 @@ import {
   BatchWriteCommand,
   ScanCommand
 } from "@aws-sdk/lib-dynamodb";
-
-import { getAllObjectKeys } from "../utils/bucketHelper";
+import imgConfig from "../../../assets/metadata/images.json";
 import readConfig from "../utils/config";
 
 const config = readConfig();
