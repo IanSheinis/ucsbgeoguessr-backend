@@ -2,15 +2,19 @@ import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 import { S3StackConfigType, S3StackOutputs } from '../helpers/types';
 import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import { S3StackConfig } from '../helpers/config';
+import { Distribution, ViewerProtocolPolicy } from 'aws-cdk-lib/aws-cloudfront';
+import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
 
 /**
  * S3 Stack
  * 
  * Create the object oriented storage which will allow UCSBGeoguesser to store images w/ metadata in
  * S3StackOutputs is the outputs (exported variables) that will go to other stacks/files
+ * 
+ * S3 + Cloudfront w/ OAC:
+ * https://www.youtube.com/watch?v=GB_R9S6XJqs
  */
 export class S3Stack extends cdk.Stack implements S3StackOutputs {
   public readonly S3_BUCKET_NAME: string;
@@ -18,33 +22,22 @@ export class S3Stack extends cdk.Stack implements S3StackOutputs {
 
   constructor(scope: Construct, id: string, props: S3StackConfigType) {
     super(scope, id, props);
-    // Public image bucket (game image assets do not need to be private)
+    // Image bucket
     const bucket = new s3.Bucket(this, 'ImageBucket', {
       bucketName: `ucsb-geoguesser-images-${props?.environment}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
-      blockPublicAccess: new s3.BlockPublicAccess({
-        blockPublicAcls: true,       // Any new object has to private for security reasons
-        ignorePublicAcls: true,      // Ignore existing public ACLs (recommended)
-        blockPublicPolicy: false,    // Allow public policies
-        restrictPublicBuckets: false // Allow public access beyond your account
-      }),
-      cors: [
-      {
-        allowedMethods: [
-          s3.HttpMethods.GET, // Add other methods like POST, PUT if needed
-        ],
-        allowedOrigins: ['*'], // Or specify like ['https://example.com']
-        allowedHeaders: ['*'], // Or specify specific headers
-      },
-      ],
-    });
+      autoDeleteObjects: true
+    })
 
-    // Attach the public read policy
-    bucket.addToResourcePolicy(new iam.PolicyStatement({
-      actions: ['s3:GetObject'],
-      resources: [bucket.arnForObjects('*')],
-      principals: [new iam.AnyPrincipal()],
-    }));
+    const dist = new Distribution(this, 'Distribution', {
+      defaultRootObject: 'index.html',
+      defaultBehavior: {
+        // S3BucketOrigin construct with OAC functionality 
+        origin: S3BucketOrigin.withOriginAccessControl(bucket),
+        viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS
+      },
+    });
 
     this.S3_BUCKET_NAME = bucket.bucketName;
     this.S3_BUCKET_ARN = bucket.bucketArn;
@@ -72,6 +65,12 @@ export class S3Stack extends cdk.Stack implements S3StackOutputs {
       value: this.S3_BUCKET_ARN,
       exportName: `${props.environment}-image-bucket-arn`,
       description: `Image bucket ARN for ${props.environment} environment`,
+    });
+
+    new cdk.CfnOutput(this, "CloudFrontUrl", {
+      value: `https://${dist.distributionDomainName}`,
+      exportName: `${props.environment}-cloudfront-url`,
+      description: `CloudFront distribution URL for ${props.environment} environment`,
     });
 
   }

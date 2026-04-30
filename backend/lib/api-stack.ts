@@ -2,12 +2,7 @@ import * as logs from "aws-cdk-lib/aws-logs";
 import {
   Stack,
   aws_apigateway as apigw,
-  aws_ec2 as ec2,
-  aws_s3 as s3,
   Fn,
-  Duration,
-  aws_kms,
-  aws_lambda as lambda,
   CfnOutput,
   RemovalPolicy
 } from "aws-cdk-lib";
