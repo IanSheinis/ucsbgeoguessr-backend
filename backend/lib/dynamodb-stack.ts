@@ -23,7 +23,13 @@ export class DynamoDBStack extends cdk.Stack implements DynamoDBStackOutputs {
     bucketTable.addGlobalSecondaryIndex({
       indexName: 'by-category-index',
       partitionKey: { name: 'category', type: AttributeType.STRING },
-      sortKey: { name: 'index', type: AttributeType.NUMBER }, // numeric SK!
+      sortKey: { name: 'index', type: AttributeType.NUMBER }, 
+    });
+
+    // GSI to query specificaly ALL images randomly
+    bucketTable.addGlobalSecondaryIndex({
+      indexName: 'by-category-index',
+      partitionKey: { name: 'global_index', type: AttributeType.NUMBER },
     });
 
     this.BucketTableName = bucketTable.tableName;  
