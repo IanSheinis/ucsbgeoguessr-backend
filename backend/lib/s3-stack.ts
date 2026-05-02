@@ -34,7 +34,9 @@ export class S3Stack extends cdk.Stack implements S3StackOutputs {
       defaultRootObject: 'index.html',
       defaultBehavior: {
         // S3BucketOrigin construct with OAC functionality 
-        origin: S3BucketOrigin.withOriginAccessControl(bucket),
+        origin: S3BucketOrigin.withOriginAccessControl(bucket, {
+        originShieldRegion: 'us-west-2', // Shield not available in us-west-1
+      }),
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS
       },
     });
@@ -49,7 +51,6 @@ export class S3Stack extends cdk.Stack implements S3StackOutputs {
       destinationBucket: bucket,
       memoryLimit: 1024, // Need more memory for images
       ephemeralStorageSize: cdk.Size.gibibytes(2), // Amount of images to upload to s3, if it exceeds 2 GB, how
-      exclude: ['images.ts'],
       outputObjectKeys: true // Will need this when assigning metadata
     })
 
