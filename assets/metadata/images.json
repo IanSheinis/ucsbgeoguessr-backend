@@ -7,5 +7,23 @@
     "Categories": [
       "New Zealand"
     ]
+  },
+  {
+    "imgName": "South Street Seaport 002.JPG",
+    "Location": "South Street Seaport",
+    "Latitude": "40.7061",
+    "Longitude": "-74.0033",
+    "Categories": [
+      "United States"
+    ]
+  },
+  {
+    "imgName": "Cadillac Ranch 2.jpg",
+    "Location": "Cadillac Ranch",
+    "Latitude": "35.18722222",
+    "Longitude": "-101.98706667",
+    "Categories": [
+      "United States"
+    ]
   }
 ]

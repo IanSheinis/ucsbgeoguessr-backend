@@ -18,12 +18,17 @@ import os
 from dotenv import load_dotenv
 from pathlib import Path
 import time
-
+import argparse
 load_dotenv()
 
 ### Config ###
-IMG_COUNT = 1      # Image query count
-IMG_WIDTH = 1024    # Image pixel width
+
+# Pass in img count as an argument
+parser = argparse.ArgumentParser()
+parser.add_argument("--count", type=int, default=1, help="Number of wikidata images to fetch")
+args = parser.parse_args()
+
+IMG_COUNT = args.count # Image query count
 USER_AGENT = os.environ["USER_AGENT"]  # required by Wikimedia
 REQUEST_DELAY_SEC = 1.0       # be polite to Wikimedia servers
 
