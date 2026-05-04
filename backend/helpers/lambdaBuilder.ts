@@ -15,6 +15,8 @@ import {
 } from "./types";
 import { ApiConfig } from "./config";
 import * as layers from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
+
 
 type Mutable<T> = {
   -readonly [P in keyof T]: T[P];
@@ -144,6 +146,13 @@ export default class LambdaBuilder {
     return this;
   }
 
+  private logRetention: logs.RetentionDays = logs.RetentionDays.ONE_WEEK;
+
+  setLogRetention(retention: logs.RetentionDays) {
+    this.logRetention = retention;
+    return this;
+  }
+  
   /**
    * Enable provisioned concurrency for this Lambda.
    * This eliminates cold starts but incurs additional cost.
@@ -171,6 +180,12 @@ export default class LambdaBuilder {
     if (existingLogGroup) {
       fn.node.tryRemoveChild("LogGroup");
     }
+
+    new logs.LogGroup(this.scope, `${this.functionName}Logs`, {
+      logGroupName: `/aws/lambda/${fn.functionName}`,
+      retention: this.logRetention,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
 
     // Configure provisioned concurrency if specified
     const concurrency =

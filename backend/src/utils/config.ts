@@ -62,14 +62,14 @@ export default function readConfig(): LambdaEnvVariables {
     const REGION = getOptionalEnv("REGION", "us-west-1");
     const S3_BUCKET_NAME = getOptionalEnv("S3_BUCKET_NAME", "");
     const LOG_LEVEL = checkLogLevel(getOptionalEnv("LOG_LEVEL", "info"));
-    const BUCKET_TABLE_NAME = getOptionalEnv("BUCKET_TABLE_NAME", ""); 
+    const METADATA_TABLE_NAME = getOptionalEnv("METADATA_TABLE_NAME", ""); 
     return {
     ORIGIN_DOMAIN,
     ENVIRONMENT,
     REGION,
     LOG_LEVEL,
     S3_BUCKET_NAME,
-    BUCKET_TABLE_NAME
+    METADATA_TABLE_NAME
     };
 }
 

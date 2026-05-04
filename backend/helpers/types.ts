@@ -34,7 +34,7 @@ export interface S3StackOutputs {
 }
 
 export interface DynamoDBStackOutputs {
-    BucketTableName: string
+    MetadataTableName: string
 }
 
 export interface MetadataStackOutputs {
@@ -83,7 +83,7 @@ export interface LambdaEnvVariables {
   REGION: string;
   LOG_LEVEL: "error" | "warn" | "info" | "verbose" | "debug" | "silly";
   S3_BUCKET_NAME?: string;
-  BUCKET_TABLE_NAME?: string;
+  METADATA_TABLE_NAME?: string;
 }
 
 export interface EndpointConfig {

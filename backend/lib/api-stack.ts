@@ -40,14 +40,14 @@ export class ApiStack extends Stack {
     
     const imageBucketName = Fn.importValue(`${props.environment}-image-bucket-name`);
     const imageBucketARN = Fn.importValue(`${props.environment}-image-bucket-arn`);
-    const bucketTableName = Fn.importValue( `${props.environment}-BucketTableName`);
+    const metadataTableName = Fn.importValue( `${props.environment}-MetadataTableName`);
 
     // Environment variables for lambda functions created by the infrastructure function
     const LambdaEnvVars: LambdaEnvVariables = {
       REGION: props.region,
       LOG_LEVEL: "debug", // TODO change to be from config
       S3_BUCKET_NAME: imageBucketName,
-      BUCKET_TABLE_NAME: bucketTableName
+      METADATA_TABLE_NAME: metadataTableName
 
     }
 

@@ -16,7 +16,7 @@ const app = new cdk.App();
 // Create S3 for images and metadata
 const s3Stack = new S3Stack(app, `S3Stack-${GeneralConfig.environment}`, {
   ...S3StackConfig,
-  description: `${GeneralConfig.app_name} S3 backend infrastructure stack for ${GeneralConfig.environment} environment`,
+  description: `${GeneralConfig.app_name} S3 infrastructure stack for ${GeneralConfig.environment} environment`,
   tags: {
     Environment: GeneralConfig.environment,
     Project: `${GeneralConfig.app_name}-${GeneralConfig.environment}-stack`
@@ -30,7 +30,7 @@ const s3Stack = new S3Stack(app, `S3Stack-${GeneralConfig.environment}`, {
 // Create DDB for categories and metadata
 const dynamoDBStack = new DynamoDBStack(app, `DynamoDBStack-${GeneralConfig.environment}`, {
   ...S3StackConfig,
-  description: `${GeneralConfig.app_name} dynammoDB backend infrastructure stack for ${GeneralConfig.environment} environment`,
+  description: `${GeneralConfig.app_name} DynammoDB infrastructure stack for ${GeneralConfig.environment} environment`,
   tags: {
     Environment: GeneralConfig.environment,
     Project: `${GeneralConfig.app_name}-${GeneralConfig.environment}-stack`
@@ -62,7 +62,7 @@ apiStack.addDependency(s3Stack)
 // Invoke metadata
 const metadataStack = new MetadataStack(app, `MetadataStack-${MetadataStackConfig.environment}`, {
   ...MetadataStackConfig,
-  description: `${GeneralConfig.app_name} RestAPI infrastructure stack for ${GeneralConfig.environment} environment`,
+  description: `${GeneralConfig.app_name} Metadata lambda invocation infrastructure stack for ${GeneralConfig.environment} environment`,
   tags: {
     Environment: MetadataStackConfig.environment,
     Project: `${GeneralConfig.app_name}-${GeneralConfig.environment}-stack`,

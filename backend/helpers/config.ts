@@ -70,7 +70,7 @@ const backendDir = path.dirname(helpersDir);
 const srcPath = path.join(backendDir, "src");
 
 const imageBucketARN = Fn.importValue(`${S3StackConfig.environment}-image-bucket-arn`);
-const bucketTableARN = Fn.importValue( `${DynamoDBStackConfig.environment}-BucketTableArn`);
+const metadataTableARN = Fn.importValue( `${DynamoDBStackConfig.environment}-MetadataTableArn`);
 const imageBucketObjPolicy = new iam.PolicyStatement({
                                 effect: iam.Effect.ALLOW,
                                 actions: ["s3:GetObject", "s3:PutObject"],
@@ -81,7 +81,7 @@ const imageBucketPolicy = new iam.PolicyStatement({
                                 actions: ["s3:ListBucket"],
                                 resources: [imageBucketARN],  // No '/*' here
                               })
-const bucketTablePolicy = new iam.PolicyStatement({
+const metadataTablePolicy = new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: [
             "dynamodb:PutItem",
@@ -92,8 +92,8 @@ const bucketTablePolicy = new iam.PolicyStatement({
             "dynamodb:Scan"
           ],
           resources: [
-            bucketTableARN,
-            `${bucketTableARN}/index/by-category`,
+            metadataTableARN,
+            `${metadataTableARN}/index/by-category`,
           ],
         });
 /**
@@ -153,7 +153,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: false,
-    policyList: [imageBucketObjPolicy, imageBucketPolicy, bucketTablePolicy],
+    policyList: [imageBucketObjPolicy, imageBucketPolicy, metadataTablePolicy],
   }
 ]
 

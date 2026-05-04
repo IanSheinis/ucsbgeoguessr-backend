@@ -58,7 +58,7 @@ export const handler = async (
       return ResponseHandler.internalServerError("No bucket env")
     }
 
-    const tableName = config.BUCKET_TABLE_NAME;
+    const tableName = config.METADATA_TABLE_NAME;
     if (!tableName) {
       return ResponseHandler.internalServerError("Table name not configured");
     }

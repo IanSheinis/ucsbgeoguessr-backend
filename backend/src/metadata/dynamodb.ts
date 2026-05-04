@@ -51,7 +51,7 @@ export async function deleteAllItemsInTable(tableName: string, keyFields: string
                             { TableName: tableName, ProjectionExpression: keyFields.join(', ') } // Only load needed columns for deletion
                           )) {
     const items = page.Items
-    if (items) { 
+    if (items && items.length > 0) { 
       await docClient.send(
         new BatchWriteCommand({ // Batch delete
           RequestItems: {
@@ -68,7 +68,7 @@ export async function deleteAllItemsInTable(tableName: string, keyFields: string
 }
   
 export const handler = async () => {
-  const tableName = config.BUCKET_TABLE_NAME;
+  const tableName = config.METADATA_TABLE_NAME;
 
   if (!tableName) {
     console.error("Missing configuration");
@@ -82,7 +82,7 @@ export const handler = async () => {
     console.log("err: config is empty");
   }
 
-  if (config.BUCKET_TABLE_NAME === undefined) {
+  if (config.METADATA_TABLE_NAME === undefined) {
     console.log("err: bucket table name undefined")
     return
   }
@@ -134,7 +134,7 @@ export const handler = async () => {
 
     const command = new BatchWriteCommand({
       RequestItems: {
-        [config.BUCKET_TABLE_NAME]: putRequests,
+        [config.METADATA_TABLE_NAME]: putRequests,
       },
     });
 
