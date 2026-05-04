@@ -153,17 +153,6 @@ export default class LambdaBuilder {
     return this;
   }
   
-  /**
-   * Enable provisioned concurrency for this Lambda.
-   * This eliminates cold starts but incurs additional cost.
-   */
-  setProvisionedConcurrency(concurrency: number) {
-    this.provisionedConcurrency = concurrency;
-    return this;
-  }
-
-  private provisionedConcurrency?: number;
-
   build() {
     const id = `${this.functionName}Fn`;
 
@@ -186,21 +175,6 @@ export default class LambdaBuilder {
       retention: this.logRetention,
       removalPolicy: RemovalPolicy.DESTROY,
     });
-
-    // Configure provisioned concurrency if specified
-    const concurrency =
-      this.provisionedConcurrency ?? this.config.provisionedConcurrency;
-    if (concurrency && concurrency > 0) {
-      // Create a version for provisioned concurrency
-      const version = fn.currentVersion;
-
-      // Create an alias with provisioned concurrency
-      new lambda.Alias(this.scope, `${this.functionName}ProvisionedAlias`, {
-        aliasName: "live",
-        version: version,
-        provisionedConcurrentExecutions: concurrency,
-      });
-    }
 
     return fn;
   }
