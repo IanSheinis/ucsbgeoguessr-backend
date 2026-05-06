@@ -102,8 +102,8 @@ export interface EndpointConfig {
   };
 
   // Permission list for resources, add to this when there is a new resource (MAKE SURE TO ADD LOGIC IN API-STACK.TS GETORCREATE FUNCTION)
-  readonly accessImageBucket?: boolean;
-  readonly accessMetadataTable?: boolean;
+  readonly readImageBucket?: boolean;
+  readonly readMetadataTable?: boolean;
 }
 
 export interface ApiStackConfig extends cdk.StackProps, CommonConfigType {

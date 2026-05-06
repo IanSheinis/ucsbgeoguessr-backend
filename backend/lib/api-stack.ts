@@ -149,11 +149,11 @@ export class ApiStack extends Stack {
     const lambdafn = this.getOrCreateFunction(functionName, config, env);
 
     // Grant permissions based on flags
-    if (config.accessImageBucket) {
-      props.imageBucket!.grantReadWrite(lambdafn);
+    if (config.readImageBucket) {
+      props.imageBucket!.grantRead(lambdafn);
     }
-    if (config.accessMetadataTable) {
-      props.metadataTable!.grantReadWriteData(lambdafn);
+    if (config.readMetadataTable) {
+      props.metadataTable!.grantReadData(lambdafn);
     }
 
     const integration = new apigw.LambdaIntegration(lambdafn, {

@@ -87,7 +87,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: false,
-    accessMetadataTable: true,
+    readMetadataTable: true,
   },
   {
     // GET /image/{imgName}
@@ -98,7 +98,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: true,
-    accessMetadataTable: true,
+    readMetadataTable: true,
   },
   {
     // GET /image/random/{amount}
@@ -109,7 +109,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: true,
-    accessMetadataTable: true,
+    readMetadataTable: true,
   },
   {
     // POST /image/random
@@ -120,7 +120,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: false,
-    accessMetadataTable: true,
+    readMetadataTable: true,
   },
   {
     // POST /image/category/random
@@ -131,7 +131,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: false,
-    accessMetadataTable: true,
+    readMetadataTable: true,
   },
 ];
 
