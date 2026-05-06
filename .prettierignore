@@ -1,0 +1,7 @@
+# When modifying this modify eslint.config.mjs ignore also
+dist
+node_modules
+cdk.out
+assets/scripts/.venv
+*.json
+*.yaml

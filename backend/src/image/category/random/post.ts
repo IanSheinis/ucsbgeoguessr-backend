@@ -1,24 +1,18 @@
 /**
  * Get a random image based on specific category and exclude all images in exclusion list
  */
-import {
-  APIGatewayProxyEvent,
-  APIGatewayProxyResult,
-  Context,
-} from "aws-lambda";
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
-import ResponseHandler, { parseEventBody } from "../../../utils/json_format";  
-import readConfig from "../../../utils/config";
-import { getRandomElement, removeExcluded } from "../../../utils/helpers";
-import { fetchBase64 } from "../../../utils/bucketHelper";
-import { S3Client } from "@aws-sdk/client-s3";
+import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import ResponseHandler, { parseEventBody } from '../../../utils/apigw_format';
+import readConfig from '../../../utils/config';
+import { getRandomElement, removeExcluded } from '../../../utils/helpers';
+import { fetchBase64 } from '../../../utils/bucketHelper';
+import { S3Client } from '@aws-sdk/client-s3';
 
 const config = readConfig();
 const s3 = new S3Client({ region: process.env.REGION });
-const docClient = DynamoDBDocumentClient.from(
-  new DynamoDBClient({ region: config.REGION })
-);
+const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.REGION }));
 
 /**
  * JSON example
@@ -26,101 +20,101 @@ const docClient = DynamoDBDocumentClient.from(
  *  "category" : "food", // Not case sensitive
  *  "exclusionList" : ["image.jpg","image2.jpg"] // Case sensitive
  * }
- * 
+ *
  * returns 200 w/ an image upon success
  * returns 204 if no images
  * returns 400 if bad request
  * returns 500 if internal server error
  */
 export const handler = async (
-  event: APIGatewayProxyEvent,
-  context: Context
+    event: APIGatewayProxyEvent,
+    _context: Context,
 ): Promise<APIGatewayProxyResult> => {
     let body;
 
     // Turn event body to json
     try {
-      body = parseEventBody(event   );
+        body = parseEventBody(event);
     } catch (parseError) {
-      return ResponseHandler.badRequest("JSON syntax error");
+        console.error('Failed to parse request body', parseError);
+        return ResponseHandler.badRequest('JSON syntax error');
     }
-  try {
-    const {category, exclusionList} = body;
+    try {
+        const { category, exclusionList } = body;
 
-    console.log('body: ' + JSON.stringify(body))
+        console.log('body: ' + JSON.stringify(body));
 
-    if (exclusionList == undefined) {
-      return ResponseHandler.badRequest("Missing 'exclusionList' query parameter");
-    }
-
-    const bucket = config.S3_BUCKET_NAME;
-    if (!bucket) {
-      return ResponseHandler.internalServerError("No bucket env")
-    }
-
-    const tableName = config.METADATA_TABLE_NAME;
-    if (!tableName) {
-      return ResponseHandler.internalServerError("Table name not configured");
-    }
-
-    if (!category) {
-      return ResponseHandler.badRequest("Missing 'category' query parameter");
-    }
-
-    const categoryLower = category.toLowerCase();
-
-    // DDB query expression
-    const result = await docClient.send(
-      new QueryCommand({
-        TableName: tableName,
-        IndexName: "by-category", // GSI
-        KeyConditionExpression: "category = :cat",
-        ExpressionAttributeValues: {
-          ":cat": categoryLower, // Replace :cat with categoryLower (good practice for injection attacks)
-        },
-        // Optional: sort by s3Key (alphabetical)
-        ScanIndexForward: true,
-      })
-    );
-
-    // Turn object Name into list of objects
-    const objects = (result.Items ?? [])
-    .filter(item => !!item.objectName)  // skip items without objectName
-    .map(item => item.objectName!);
-
-    const excludedObjects = removeExcluded(objects, exclusionList);
-
-    if (excludedObjects.length == 0) {
-      // If everything is excluded
-      return ResponseHandler.success("", 204);
-    }
-
-    const randomObject: string = getRandomElement(excludedObjects);
-
-    console.log("Fetching from:", randomObject);
-
-    const { base64body, metadata } = await fetchBase64(s3, bucket, randomObject);
-    if (!base64body) {
-      return ResponseHandler.internalServerError("No image available"); 
-    }
-    const headers = {
-      ...metadata,
-      "Access-Control-Allow-Headers": "*",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "*",
-      "Content-Type": "image/png",
-    }
-
-    // Custom return for base64 encoded
-    return {
-        'headers': headers,
-        'statusCode': 200,
-        'body': base64body,
-        'isBase64Encoded': true
+        if (exclusionList === undefined) {
+            return ResponseHandler.badRequest("Missing 'exclusionList' query parameter");
         }
-  }
-  catch (error) {
-    console.error("Query error:", error);
-    return ResponseHandler.internalServerError(error);
-  }
+
+        const bucket = config.S3_BUCKET_NAME;
+        if (!bucket) {
+            return ResponseHandler.internalServerError('No bucket env');
+        }
+
+        const tableName = config.METADATA_TABLE_NAME;
+        if (!tableName) {
+            return ResponseHandler.internalServerError('Table name not configured');
+        }
+
+        if (!category) {
+            return ResponseHandler.badRequest("Missing 'category' query parameter");
+        }
+
+        const categoryLower = category.toLowerCase();
+
+        // DDB query expression
+        const result = await docClient.send(
+            new QueryCommand({
+                TableName: tableName,
+                IndexName: 'by-category', // GSI
+                KeyConditionExpression: 'category = :cat',
+                ExpressionAttributeValues: {
+                    ':cat': categoryLower, // Replace :cat with categoryLower (good practice for injection attacks)
+                },
+                // Optional: sort by s3Key (alphabetical)
+                ScanIndexForward: true,
+            }),
+        );
+
+        // Turn object Name into list of objects
+        const objects = (result.Items ?? [])
+            .filter((item) => !!item.objectName) // skip items without objectName
+            .map((item) => item.objectName!);
+
+        const excludedObjects = removeExcluded(objects, exclusionList);
+
+        if (excludedObjects.length === 0) {
+            // If everything is excluded
+            return ResponseHandler.success('', 204);
+        }
+
+        const randomObject: string = getRandomElement(excludedObjects);
+
+        console.log('Fetching from:', randomObject);
+
+        const { base64body, metadata } = await fetchBase64(s3, bucket, randomObject);
+        if (!base64body) {
+            return ResponseHandler.internalServerError('No image available');
+        }
+        const headers = {
+            ...metadata,
+            'Access-Control-Allow-Headers': '*',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': '*',
+            'Content-Type': 'image/png',
+        };
+
+        // Custom return for base64 encoded
+        return {
+            headers: headers,
+            statusCode: 200,
+            body: base64body,
+            isBase64Encoded: true,
+        };
+    } catch (error) {
+        console.error('Query error:', error);
+        return ResponseHandler.internalServerError(error);
+    }
 };

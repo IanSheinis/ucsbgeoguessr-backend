@@ -1,6 +1,5 @@
-import * as winston from "winston";
-const { combine, timestamp, errors, json} = winston.format;
-
+import * as winston from 'winston';
+const { combine, timestamp, errors, json } = winston.format;
 
 let loggerInstance: winston.Logger;
 
@@ -9,15 +8,14 @@ let loggerInstance: winston.Logger;
  * @returns logger
  */
 export function getLogger(): winston.Logger {
-  if (!loggerInstance) {
-    
-    loggerInstance = winston.createLogger({
-      level: 'INFO', // Change this to DEBUG for debug statements
-      format: combine(timestamp(), errors({ stack: true }), json()),
-      transports: [new winston.transports.Console()],
-    });
-  }
-  return loggerInstance;
+    if (!loggerInstance) {
+        loggerInstance = winston.createLogger({
+            level: 'INFO', // Change this to DEBUG for debug statements
+            format: combine(timestamp(), errors({ stack: true }), json()),
+            transports: [new winston.transports.Console()],
+        });
+    }
+    return loggerInstance;
 }
 
 export const logger = getLogger();
