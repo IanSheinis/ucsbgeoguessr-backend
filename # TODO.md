@@ -1,8 +1,7 @@
 # TODO
 
 Document ddb architecture decision
-modify lambda function random look up
-modify apigw and lambda function not sending images
+modify lambda function not sending images
 Add warm caching with github actions looping through imgConfig w/ curl
 
 Arch

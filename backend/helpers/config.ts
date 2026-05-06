@@ -80,11 +80,11 @@ export const endpointList: EndpointConfig[] = [
         readMetadataTable: true,
     },
     {
-        // GET /image/{imgName}
-        path: '/image/{imgName}',
-        httpMethod: 'GET',
+        // POST /image
+        path: '/image',
+        httpMethod: 'POST',
         lambdaBuilderConfig: {
-            fileName: 'image/{imgName}/get.ts',
+            fileName: 'image/post.ts',
             memorySize: 512, // Increased from 256MB for faster execution
         },
         pathParameterRequired: true,

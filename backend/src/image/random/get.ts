@@ -4,16 +4,15 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import ResponseHandler from '../../utils/apigw_format';
 import readConfig from '../../utils/config';
-import { S3Client } from '@aws-sdk/client-s3';
-import { getRandomElement } from '../../utils/helpers';
-import { fetchBase64, getAllObjectKeys } from '../../utils/bucketHelper';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { queryByCategoryIndex, queryCategory, queryMetadata } from '../../utils/ddb_helper';
+import { aggregateMetadata } from '../../utils/helpers';
+import { MetadataRow } from '../../utils/types';
 
-/**
- * How to send images via lambda
- * https://docs.aws.amazon.com/apigateway/latest/developerguide/lambda-proxy-binary-media.html
- */
 const config = readConfig();
-const s3 = new S3Client({ region: process.env.REGION });
+const client = new DynamoDBClient({ region: config.REGION });
+const docClient = DynamoDBDocumentClient.from(client);
 
 /**
  * returns 200 w/ an image upon success
@@ -26,40 +25,37 @@ export const handler = async (
     _context: Context,
 ): Promise<APIGatewayProxyResult> => {
     try {
-        const bucket = config.S3_BUCKET_NAME;
-        if (!bucket) {
-            return ResponseHandler.internalServerError('No bucket env');
+        const tableName = config.METADATA_TABLE_NAME;
+
+        if (!tableName) {
+            console.error('Missing bucket table environment variable');
+            return ResponseHandler.internalServerError();
         }
 
-        const objects = await getAllObjectKeys(s3, bucket);
-        if (!objects) {
-            return ResponseHandler.success('', 204);
+        // Row with 'all' s3Key
+        const allCategoryRow = await queryCategory('all', tableName, docClient);
+        if (!allCategoryRow.length) {
+            console.error('Could not find all category');
+            return ResponseHandler.internalServerError();
         }
 
-        const randomObject: string = getRandomElement(objects);
-        console.log('Fetching from:', randomObject);
+        const allSize = allCategoryRow[0].size;
 
-        const { base64body, metadata } = await fetchBase64(s3, bucket, randomObject);
-        if (!base64body) {
-            return ResponseHandler.internalServerError('No image available');
+        const randomIndex = Math.floor(Math.random() * allSize);
+        const s3Key = await queryByCategoryIndex('all', randomIndex, tableName, docClient);
+        if (!s3Key) {
+            return ResponseHandler.badRequest('No image available');
         }
-        const headers = {
-            ...metadata,
-            'Access-Control-Allow-Headers': '*',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': '*',
-            'Content-Type': 'image/png',
-        };
 
-        // Custom return for base64 encoded
-        return {
-            headers: headers,
-            statusCode: 200,
-            body: base64body,
-            isBase64Encoded: true,
-        };
+        const metadataRaw = await queryMetadata(s3Key, tableName, docClient);
+        if (!metadataRaw) {
+            console.error('metadataRaw was null for S3key: ', s3Key);
+            return ResponseHandler.internalServerError(); // This shouldn't happen
+        }
+        const metadata = aggregateMetadata(metadataRaw as MetadataRow[]);
+        return ResponseHandler.success(metadata);
     } catch (e) {
         console.error(e);
-        return ResponseHandler.internalServerError('Internal server error: ' + e);
+        return ResponseHandler.internalServerError();
     }
 };

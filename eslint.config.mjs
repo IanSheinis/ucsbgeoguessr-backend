@@ -38,7 +38,14 @@ export default [
             eqeqeq: ['error', 'always'],
             'prettier/prettier': 'error',
             'no-unused-vars': 'off',
-            '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+            '@typescript-eslint/no-unused-vars': [
+                'error',
+                {
+                    argsIgnorePattern: '^_',
+                    destructuredArrayIgnorePattern: '^_',
+                    varsIgnorePattern: '^_',
+                },
+            ],
         },
     },
     {

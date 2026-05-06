@@ -4,12 +4,15 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import ResponseHandler, { parseEventBody } from '../../utils/apigw_format';
 import readConfig from '../../utils/config';
-import { getRandomElement, removeExcluded } from '../../utils/helpers';
-import { fetchBase64, getAllObjectKeys } from '../../utils/bucketHelper';
-import { S3Client } from '@aws-sdk/client-s3';
+import { aggregateMetadata, getRandomElement } from '../../utils/helpers';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { queryAllS3Keys, queryMetadata } from '../../utils/ddb_helper';
+import { MetadataRow } from '../../utils/types';
 
 const config = readConfig();
-const s3 = new S3Client({ region: process.env.REGION });
+const client = new DynamoDBClient({ region: config.REGION });
+const docClient = DynamoDBDocumentClient.from(client);
 
 /**
  * JSON example
@@ -43,49 +46,32 @@ export const handler = async (
             return ResponseHandler.badRequest("Missing 'exclusionList' query parameter");
         }
 
-        const bucket = config.S3_BUCKET_NAME;
-        if (!bucket) {
-            return ResponseHandler.internalServerError('No bucket env');
+        const tableName = config.METADATA_TABLE_NAME;
+
+        if (!tableName) {
+            console.error('Missing bucket table environment variable');
+            return ResponseHandler.internalServerError();
         }
 
-        // Turn object Name into list of objects
-        const objects = await getAllObjectKeys(s3, bucket);
-        if (!objects) {
-            return ResponseHandler.badRequest('No images in s3 bucket');
-        }
-
-        const excludedObjects = removeExcluded(objects, exclusionList);
-
-        if (excludedObjects.length === 0) {
-            // If everything is excluded
+        // Return remaining s3key after excluding the exclusion list
+        const remainingS3Keys = await queryAllS3Keys(exclusionList, tableName, docClient);
+        if (remainingS3Keys.length === 0) {
+            // If everything is excluded or no images return 204
             return ResponseHandler.success('', 204);
         }
 
-        const randomObject: string = getRandomElement(excludedObjects);
+        const s3Key: string = getRandomElement<string>(remainingS3Keys)!; // Null assertion b/c remainingObjects is non-empty
 
-        console.log('Fetching from:', randomObject);
-
-        const { base64body, metadata } = await fetchBase64(s3, bucket, randomObject);
-        if (!base64body) {
-            return ResponseHandler.internalServerError('No image available');
+        const metadataRaw = await queryMetadata(s3Key, tableName, docClient);
+        if (!metadataRaw) {
+            console.error('metadataRaw was null for S3key: ', s3Key);
+            return ResponseHandler.internalServerError(); // This shouldn't happen
         }
-        const headers = {
-            ...metadata,
-            'Access-Control-Allow-Headers': '*',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': '*',
-            'Content-Type': 'image/png',
-        };
+        const metadata = aggregateMetadata(metadataRaw as MetadataRow[]);
 
-        // Custom return for base64 encoded
-        return {
-            headers: headers,
-            statusCode: 200,
-            body: base64body,
-            isBase64Encoded: true,
-        };
-    } catch (error) {
-        console.error('Query error:', error);
-        return ResponseHandler.internalServerError(error);
+        return ResponseHandler.success(metadata);
+    } catch (e) {
+        console.error(e);
+        return ResponseHandler.internalServerError();
     }
 };

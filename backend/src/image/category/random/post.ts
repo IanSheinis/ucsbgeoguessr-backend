@@ -3,16 +3,16 @@
  */
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import ResponseHandler, { parseEventBody } from '../../../utils/apigw_format';
 import readConfig from '../../../utils/config';
-import { getRandomElement, removeExcluded } from '../../../utils/helpers';
-import { fetchBase64 } from '../../../utils/bucketHelper';
-import { S3Client } from '@aws-sdk/client-s3';
+import { aggregateMetadata, getRandomElement } from '../../../utils/helpers';
+import { queryAllS3Keys, queryMetadata } from '../../../utils/ddb_helper';
+import { MetadataRow } from '../../../utils/types';
 
 const config = readConfig();
-const s3 = new S3Client({ region: process.env.REGION });
-const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.REGION }));
+const client = new DynamoDBClient({ region: config.REGION });
+const docClient = DynamoDBDocumentClient.from(client);
 
 /**
  * JSON example
@@ -44,13 +44,14 @@ export const handler = async (
 
         console.log('body: ' + JSON.stringify(body));
 
-        if (exclusionList === undefined) {
-            return ResponseHandler.badRequest("Missing 'exclusionList' query parameter");
+        if (!category) {
+            return ResponseHandler.badRequest("Missing 'category' query parameter");
         }
 
-        const bucket = config.S3_BUCKET_NAME;
-        if (!bucket) {
-            return ResponseHandler.internalServerError('No bucket env');
+        const categoryLower = category.toLowerCase();
+
+        if (exclusionList === undefined) {
+            return ResponseHandler.badRequest("Missing 'exclusionList' query parameter");
         }
 
         const tableName = config.METADATA_TABLE_NAME;
@@ -58,63 +59,29 @@ export const handler = async (
             return ResponseHandler.internalServerError('Table name not configured');
         }
 
-        if (!category) {
-            return ResponseHandler.badRequest("Missing 'category' query parameter");
-        }
-
-        const categoryLower = category.toLowerCase();
-
-        // DDB query expression
-        const result = await docClient.send(
-            new QueryCommand({
-                TableName: tableName,
-                IndexName: 'by-category', // GSI
-                KeyConditionExpression: 'category = :cat',
-                ExpressionAttributeValues: {
-                    ':cat': categoryLower, // Replace :cat with categoryLower (good practice for injection attacks)
-                },
-                // Optional: sort by s3Key (alphabetical)
-                ScanIndexForward: true,
-            }),
+        const remainingS3Keys = await queryAllS3Keys(
+            exclusionList,
+            tableName,
+            docClient,
+            categoryLower,
         );
 
-        // Turn object Name into list of objects
-        const objects = (result.Items ?? [])
-            .filter((item) => !!item.objectName) // skip items without objectName
-            .map((item) => item.objectName!);
-
-        const excludedObjects = removeExcluded(objects, exclusionList);
-
-        if (excludedObjects.length === 0) {
+        if (remainingS3Keys.length === 0) {
             // If everything is excluded
             return ResponseHandler.success('', 204);
         }
 
-        const randomObject: string = getRandomElement(excludedObjects);
+        const randomS3Key: string = getRandomElement(remainingS3Keys)!; // Null assertion b/c remainingObjects is non-empty
 
-        console.log('Fetching from:', randomObject);
-
-        const { base64body, metadata } = await fetchBase64(s3, bucket, randomObject);
-        if (!base64body) {
-            return ResponseHandler.internalServerError('No image available');
+        const metadataRaw = await queryMetadata(randomS3Key, tableName, docClient);
+        if (!metadataRaw) {
+            console.error('metadataRaw was null for S3key: ', randomS3Key);
+            return ResponseHandler.internalServerError(); // This shouldn't happen
         }
-        const headers = {
-            ...metadata,
-            'Access-Control-Allow-Headers': '*',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': '*',
-            'Content-Type': 'image/png',
-        };
-
-        // Custom return for base64 encoded
-        return {
-            headers: headers,
-            statusCode: 200,
-            body: base64body,
-            isBase64Encoded: true,
-        };
+        const metadata = aggregateMetadata(metadataRaw as MetadataRow[]);
+        return ResponseHandler.success(metadata);
     } catch (error) {
-        console.error('Query error:', error);
-        return ResponseHandler.internalServerError(error);
+        console.error(error);
+        return ResponseHandler.internalServerError();
     }
 };

@@ -36,8 +36,7 @@ const docClient = DynamoDBDocumentClient.from(client);
 
 /**
  * Deletes everything in DDB
- * Modified function from:
- * https://gist.github.com/mikebroberts/8737179a92f6e11494a02781329e1a11
+ * Adapted from: https://gist.github.com/mikebroberts/8737179a92f6e11494a02781329e1a11
  */
 export async function deleteAllItemsInTable(tableName: string, keyFields: string[]) {
     // Loop through and paginate deletes

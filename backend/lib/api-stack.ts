@@ -1,5 +1,5 @@
 import * as logs from 'aws-cdk-lib/aws-logs';
-import { Stack, aws_apigateway as apigw, RemovalPolicy } from 'aws-cdk-lib';
+import * as cdk from 'aws-cdk-lib';
 import { ApiStackConfig, EndpointConfig, LambdaEnvVariables } from '../helpers/types';
 import { Construct } from 'constructs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
@@ -18,9 +18,9 @@ import LambdaBuilder from '../helpers/lambdaBuilder';
  *  - Request validator
  *  - Options resource for CORS
  */
-export class ApiStack extends Stack {
+export class ApiStack extends cdk.Stack {
     private readonly sharedLambdaMap = new Map<string, NodejsFunction>();
-    private api: apigw.RestApi;
+    private api: apigateway.RestApi;
     constructor(scope: Construct, id: string, props: ApiStackConfig) {
         super(scope, id, props);
         this.createApi(props);
@@ -64,14 +64,13 @@ export class ApiStack extends Stack {
         const apiGatewayLogGroup = new logs.LogGroup(scope, 'ApiGatewayLogGroup', {
             logGroupName: `/aws/apigateway/${props.app_name}-${props.environment}`,
             retention: logs.RetentionDays.ONE_WEEK,
-            removalPolicy: RemovalPolicy.DESTROY,
+            removalPolicy: cdk.RemovalPolicy.DESTROY,
         });
 
         // Create the REST API
         const api = new apigateway.RestApi(scope, `${props.app_name}-${props.environment}`, {
             restApiName: `${props.app_name}-${props.environment}`,
             description: `API gateway for ${props.app_name} backend`,
-            binaryMediaTypes: ['*/*'],
             cloudWatchRole: true,
 
             defaultCorsPreflightOptions: {
@@ -90,7 +89,7 @@ export class ApiStack extends Stack {
                 stageName: props.environment,
                 tracingEnabled: true,
                 loggingLevel: apigateway.MethodLoggingLevel.INFO,
-                accessLogDestination: new apigw.LogGroupLogDestination(apiGatewayLogGroup),
+                accessLogDestination: new apigateway.LogGroupLogDestination(apiGatewayLogGroup),
                 metricsEnabled: true,
                 dataTraceEnabled: true,
             },
@@ -141,14 +140,14 @@ export class ApiStack extends Stack {
             props.metadataTable!.grantReadData(lambdafn);
         }
 
-        const integration = new apigw.LambdaIntegration(lambdafn, {
+        const integration = new apigateway.LambdaIntegration(lambdafn, {
             proxy: true,
         });
 
         // Look up resource from parent API (resources are still in parent stack to avoid hierarchy issues)
         const resource = this.api.root.resourceForPath(config.path);
 
-        let chosenValidator: apigw.IRequestValidator | undefined;
+        let chosenValidator: apigateway.IRequestValidator | undefined;
         if (config.validators && config.validator) {
             switch (config.validator) {
                 case 'body':
@@ -163,7 +162,7 @@ export class ApiStack extends Stack {
             }
         }
 
-        const methodOptions: apigw.MethodOptions = {
+        const methodOptions: apigateway.MethodOptions = {
             // Create method response settings
             // requestParameters,
 
@@ -217,7 +216,7 @@ export class ApiStack extends Stack {
             ],
         };
 
-        new apigw.Method(this, `${config.httpMethod}-${config.path}`, {
+        new apigateway.Method(this, `${config.httpMethod}-${config.path}`, {
             httpMethod: config.httpMethod,
             resource: resource,
             integration: integration,
