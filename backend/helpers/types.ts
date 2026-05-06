@@ -1,51 +1,43 @@
 import * as cdk from "aws-cdk-lib";
-import {
-  NestedStack,
-  NestedStackProps,
-  aws_apigateway as apigw,
-} from "aws-cdk-lib";
+import { aws_apigateway as apigw } from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { Duration } from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import { TableV2 } from "aws-cdk-lib/aws-dynamodb";
 
 export interface CommonConfigType {
-    readonly environment: string;
-    readonly region: string;
-    readonly app_name: string;
+  readonly environment: string;
+  readonly region: string;
+  readonly app_name: string;
 }
-export interface S3StackConfigType extends cdk.StackProps, CommonConfigType {
-    
-}
+export interface S3StackConfigType extends cdk.StackProps, CommonConfigType {}
 
-export interface DynamoDBStackConfigType extends cdk.StackProps, CommonConfigType {
-    
-}
+export interface DynamoDBStackConfigType
+  extends cdk.StackProps, CommonConfigType {}
 
-
-export interface MetadataStackConfigType extends cdk.StackProps, CommonConfigType {
-    
+export interface MetadataStackConfigType
+  extends cdk.StackProps, CommonConfigType {
+  readonly metadataTable?: TableV2;
 }
 
 export interface S3StackOutputs {
-    S3_BUCKET_NAME: string,
-    S3_BUCKET_ARN: string
+  imageBucket: s3.IBucket;
 }
 
 export interface DynamoDBStackOutputs {
-    MetadataTableName: string
+  metadataTable: TableV2;
 }
 
-export interface MetadataStackOutputs {
-}
+export interface MetadataStackOutputs {}
 
 export interface ImageConfig {
-    imgName: string,
-    Location: string,
-    Latitude: string,
-    Longitude: string,
-    Categories: string[]
+  imgName: string;
+  Location: string;
+  Latitude: string;
+  Longitude: string;
+  Categories: string[];
 }
 
 export interface LambdaBuilderConfig {
@@ -98,7 +90,6 @@ export interface EndpointConfig {
     | "HEAD"
     | "ANY";
   readonly pathParameterRequired: boolean;
-  readonly policyList: PolicyStatement[];
   readonly lambdaBuilderConfig: LambdaBuilderConfig;
   readonly sharedLambdaKey?: string;
   validator?: "body" | "params" | "bodyAndParams";
@@ -109,6 +100,10 @@ export interface EndpointConfig {
     paramsOnlyValidator: apigw.IRequestValidator;
     bodyAndParamsValidator: apigw.IRequestValidator;
   };
+
+  // Permission list for resources, add to this when there is a new resource (MAKE SURE TO ADD LOGIC IN API-STACK.TS GETORCREATE FUNCTION)
+  readonly accessImageBucket?: boolean;
+  readonly accessMetadataTable?: boolean;
 }
 
 export interface ApiStackConfig extends cdk.StackProps, CommonConfigType {
@@ -126,6 +121,8 @@ export interface ApiStackConfig extends cdk.StackProps, CommonConfigType {
     | "TRACE"
     | "ERROR"
     | "FATAL"; //lambda.ApplicationLogLevel
-  vpc?: ec2.IVpc; 
-  readonly endpointConfig: EndpointConfig[]
+  vpc?: ec2.IVpc;
+  readonly endpointConfig: EndpointConfig[];
+  readonly imageBucket?: s3.IBucket;
+  readonly metadataTable?: TableV2;
 }

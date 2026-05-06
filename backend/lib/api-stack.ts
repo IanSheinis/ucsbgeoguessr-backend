@@ -1,22 +1,19 @@
 import * as logs from "aws-cdk-lib/aws-logs";
+import { Stack, aws_apigateway as apigw, RemovalPolicy } from "aws-cdk-lib";
 import {
-  Stack,
-  aws_apigateway as apigw,
-  Fn,
-  CfnOutput,
-  RemovalPolicy
-} from "aws-cdk-lib";
-import { ApiStackConfig, EndpointConfig, LambdaEnvVariables } from "../helpers/types";
+  ApiStackConfig,
+  EndpointConfig,
+  LambdaEnvVariables,
+} from "../helpers/types";
 import { Construct } from "constructs";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { endpointList } from "../helpers/config";
-import { PolicyStatement } from "aws-cdk-lib/aws-iam";
 import LambdaBuilder from "../helpers/lambdaBuilder";
 
 /**
- * Api Stack 
- * 
+ * Api Stack
+ *
  * Recursive endpoint creating endpoint infra using /src api logc:
  *  - Lambda function
  *  - APIGW resource
@@ -30,33 +27,39 @@ export class ApiStack extends Stack {
   private api: apigw.RestApi;
   constructor(scope: Construct, id: string, props: ApiStackConfig) {
     super(scope, id, props);
-    this.createApi(props)
+    this.createApi(props);
   }
 
-  private createApi(
-    props: ApiStackConfig,
-  ): void {
+  private createApi(props: ApiStackConfig): void {
     this.api = this.createApiGateway(this, props);
-    
-    const imageBucketName = Fn.importValue(`${props.environment}-image-bucket-name`);
-    const imageBucketARN = Fn.importValue(`${props.environment}-image-bucket-arn`);
-    const metadataTableName = Fn.importValue( `${props.environment}-MetadataTableName`);
+
+    const imageBucket = props?.imageBucket;
+    if (!imageBucket) {
+      throw new Error("imageBucket is required in ApiStackConfig");
+    }
+
+    const metadataTable = props?.metadataTable;
+    if (!metadataTable) {
+      throw new Error("metadataTable is required in ApiStackConfig");
+    }
+
+    const imageBucketName = imageBucket.bucketName;
+    const imageBucketARN = imageBucket.bucketArn;
+    const metadataTableName = metadataTable.tableName;
+    const metadataTableARN = metadataTable.tableArn;
 
     // Environment variables for lambda functions created by the infrastructure function
     const LambdaEnvVars: LambdaEnvVariables = {
       REGION: props.region,
       LOG_LEVEL: "debug", // TODO change to be from config
       S3_BUCKET_NAME: imageBucketName,
-      METADATA_TABLE_NAME: metadataTableName
-
-    }
-
+      METADATA_TABLE_NAME: metadataTableName,
+    };
 
     // Recursively create infrastructure
     endpointList.forEach((config) => {
       this.createEndpoint(props, config, LambdaEnvVars);
     });
-
   }
 
   /**
@@ -74,34 +77,39 @@ export class ApiStack extends Stack {
     });
 
     // Create the REST API
-    const api = new apigateway.RestApi(scope, `${props.app_name}-${props.environment}`, {
-      restApiName: `${props.app_name}-${props.environment}`,
-      description: `API gateway for ${props.app_name} backend`,
-      binaryMediaTypes: ['*/*'],
-      cloudWatchRole: true,
+    const api = new apigateway.RestApi(
+      scope,
+      `${props.app_name}-${props.environment}`,
+      {
+        restApiName: `${props.app_name}-${props.environment}`,
+        description: `API gateway for ${props.app_name} backend`,
+        binaryMediaTypes: ["*/*"],
+        cloudWatchRole: true,
 
-      defaultCorsPreflightOptions: {
-        allowOrigins: apigateway.Cors.ALL_ORIGINS,
-        allowMethods: apigateway.Cors.ALL_METHODS,
-        allowHeaders: [
-          "Content-Type",
-          "X-Amz-Date",
-          "Authorization",
-          "X-Api-Key",
-          "X-Amz-Security-Token",
-        ],
+        defaultCorsPreflightOptions: {
+          allowOrigins: apigateway.Cors.ALL_ORIGINS,
+          allowMethods: apigateway.Cors.ALL_METHODS,
+          allowHeaders: [
+            "Content-Type",
+            "X-Amz-Date",
+            "Authorization",
+            "X-Api-Key",
+            "X-Amz-Security-Token",
+          ],
+        },
+        deploy: true,
+        deployOptions: {
+          stageName: props.environment,
+          tracingEnabled: true,
+          loggingLevel: apigateway.MethodLoggingLevel.INFO,
+          accessLogDestination: new apigw.LogGroupLogDestination(
+            apiGatewayLogGroup,
+          ),
+          metricsEnabled: true,
+          dataTraceEnabled: true,
+        },
       },
-      deploy: true,
-      deployOptions: {
-        stageName: props.environment,  
-        tracingEnabled: true,
-        loggingLevel: apigateway.MethodLoggingLevel.INFO,
-        accessLogDestination: new apigw.LogGroupLogDestination(apiGatewayLogGroup),
-        metricsEnabled: true,
-        dataTraceEnabled: true,
-    },
-
-    });
+    );
 
     const corsResponseHeaders = (): Record<string, string> => ({
       "Access-Control-Allow-Origin": `'${props.originDomain}'`,
@@ -125,26 +133,32 @@ export class ApiStack extends Stack {
     return api;
   }
 
+  /**
+   * Creates an individual endpoint based on endpoint configuration
+   */
   private createEndpoint(
     props: ApiStackConfig,
     config: EndpointConfig,
-    env: LambdaEnvVariables
+    env: LambdaEnvVariables,
   ): NodejsFunction {
     const lambdaKey = config.sharedLambdaKey;
     const functionName = lambdaKey
       ? `${lambdaKey}-${props.environment}`
       : `${config.httpMethod}-${config.path}-${props.environment}`;
 
-    const lambdafn = this.getOrCreateFunction(
-      functionName,
-      config,
-      env,
-      config.policyList,
-    );
+    const lambdafn = this.getOrCreateFunction(functionName, config, env);
+
+    // Grant permissions based on flags
+    if (config.accessImageBucket) {
+      props.imageBucket!.grantReadWrite(lambdafn);
+    }
+    if (config.accessMetadataTable) {
+      props.metadataTable!.grantReadWriteData(lambdafn);
+    }
 
     const integration = new apigw.LambdaIntegration(lambdafn, {
       proxy: true,
-    }); 
+    });
 
     // Look up resource from parent API (resources are still in parent stack to avoid hierarchy issues)
     const resource = this.api.root.resourceForPath(config.path);
@@ -216,7 +230,6 @@ export class ApiStack extends Stack {
           },
         },
       ],
-
     };
 
     new apigw.Method(this, `${config.httpMethod}-${config.path}`, {
@@ -229,29 +242,30 @@ export class ApiStack extends Stack {
     return lambdafn;
   }
 
+  /**
+   * Creates or reuses a lambda function
+   */
   private getOrCreateFunction(
     functionName: string,
     config: EndpointConfig,
     envVars: LambdaEnvVariables,
-    policies: PolicyStatement[],
   ): NodejsFunction {
+    // Handle an endpoint reusing a lambda
     const mapKey = config.sharedLambdaKey ?? functionName;
     const existing = this.sharedLambdaMap.get(mapKey);
     if (existing) {
       return existing;
     }
 
-    // todo layers?
+    // TODO: Might want layer logic in the future
     const builder = new LambdaBuilder(
       this,
       functionName,
       config.lambdaBuilderConfig,
-    )
-      .setEnv(envVars);
-    
-    policies.forEach((policy) => builder.addPolicy(policy));
+    ).setEnv(envVars);
+
     const lambdaFn = builder.build();
     this.sharedLambdaMap.set(mapKey, lambdaFn);
     return lambdaFn;
-}
+  }
 }

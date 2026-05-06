@@ -1,19 +1,24 @@
 import path from "path";
 import { logger } from "../logger";
-import {ApiStackConfig, CommonConfigType, DynamoDBStackConfigType, EndpointConfig, MetadataStackConfigType, S3StackConfigType } from "./types";
+import {
+  ApiStackConfig,
+  CommonConfigType,
+  DynamoDBStackConfigType,
+  EndpointConfig,
+  MetadataStackConfigType,
+  S3StackConfigType,
+} from "./types";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import {Fn} from "aws-cdk-lib"
-import * as iam from 'aws-cdk-lib/aws-iam';
 
 /**
  * Function to get optional environment variables
  * @param key Env name
- * @param defaultValue Default config value 
+ * @param defaultValue Default config value
  * @returns Void
  */
 function getOptionalEnv(key: string, defaultValue: string): string {
   if (!process.env[key]) {
-    logger.info(`No Env Var: ${key} using default value ${defaultValue}`)
+    logger.info(`No Env Var: ${key} using default value ${defaultValue}`);
   }
   return process.env[key] ?? defaultValue;
 }
@@ -29,7 +34,7 @@ function getOptionalEnvInt(key: string, defaultValue: number): number {
 /**
  * Typecheck winston log level
  * @param logLevel Winston log level
- * @returns 
+ * @returns
  */
 function checkLogEnv(
   logLevel: string,
@@ -45,57 +50,30 @@ function checkLogEnv(
 
 export const environment = getOptionalEnv("ENVIRONMENT", "dev").toLowerCase();
 export const region = getOptionalEnv("REGION", "us-west-1");
-export const app_name = "ucsbgeoguesser"
-console.log(environment)
+export const app_name = "ucsbgeoguesser";
+console.log(environment);
 export const GeneralConfig: CommonConfigType = {
-    environment,
-    region,
-    app_name
-}
+  environment,
+  region,
+  app_name,
+};
 
 export const S3StackConfig: S3StackConfigType = {
-    ...GeneralConfig,
-}
+  ...GeneralConfig,
+};
 
 export const DynamoDBStackConfig: DynamoDBStackConfigType = {
-    ...GeneralConfig,
-}
+  ...GeneralConfig,
+};
 
 export const MetadataStackConfig: MetadataStackConfigType = {
-    ...GeneralConfig,
-}
+  ...GeneralConfig,
+};
 const currentFile = __filename;
 const helpersDir = path.dirname(currentFile);
 const backendDir = path.dirname(helpersDir);
 const srcPath = path.join(backendDir, "src");
 
-const imageBucketARN = Fn.importValue(`${S3StackConfig.environment}-image-bucket-arn`);
-const metadataTableARN = Fn.importValue( `${DynamoDBStackConfig.environment}-MetadataTableArn`);
-const imageBucketObjPolicy = new iam.PolicyStatement({
-                                effect: iam.Effect.ALLOW,
-                                actions: ["s3:GetObject", "s3:PutObject"],
-                                resources: [`${imageBucketARN}/*`],
-                              })
-const imageBucketPolicy = new iam.PolicyStatement({
-                                effect: iam.Effect.ALLOW,
-                                actions: ["s3:ListBucket"],
-                                resources: [imageBucketARN],  // No '/*' here
-                              })
-const metadataTablePolicy = new iam.PolicyStatement({
-          effect: iam.Effect.ALLOW,
-          actions: [
-            "dynamodb:PutItem",
-            "dynamodb:BatchWriteItem",
-            "dynamodb:UpdateItem",
-            "dynamodb:Query",
-            "dynamodb:GetItem",
-            "dynamodb:Scan"
-          ],
-          resources: [
-            metadataTableARN,
-            `${metadataTableARN}/index/by-category`,
-          ],
-        });
 /**
  * Backend endpoints to be attatched to APIGateway
  */
@@ -109,7 +87,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: false,
-    policyList: [imageBucketObjPolicy, imageBucketPolicy],
+    accessMetadataTable: true,
   },
   {
     // GET /image/{imgName}
@@ -120,7 +98,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: true,
-    policyList: [imageBucketObjPolicy, imageBucketPolicy],
+    accessMetadataTable: true,
   },
   {
     // GET /image/random/{amount}
@@ -131,7 +109,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: true,
-    policyList: [imageBucketObjPolicy, imageBucketPolicy],
+    accessMetadataTable: true,
   },
   {
     // POST /image/random
@@ -142,7 +120,7 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: false,
-    policyList: [imageBucketObjPolicy, imageBucketPolicy],
+    accessMetadataTable: true,
   },
   {
     // POST /image/category/random
@@ -153,9 +131,9 @@ export const endpointList: EndpointConfig[] = [
       memorySize: 512, // Increased from 256MB for faster execution
     },
     pathParameterRequired: false,
-    policyList: [imageBucketObjPolicy, imageBucketPolicy, metadataTablePolicy],
-  }
-]
+    accessMetadataTable: true,
+  },
+];
 
 /**
  * Config used for APIGateway
@@ -169,7 +147,8 @@ export const ApiConfig: ApiStackConfig = {
   defaultHandler: "handler",
   defaultSystemLogLevel: "INFO", // log level of os
   defaultApplicationLogLevel: checkLogEnv(getOptionalEnv("LOG_LEVEL", "INFO")), // default to INFO for dev
-  authorizerEnable: //TODO enable authorizer
+  //TODO enable authorizer
+  authorizerEnable:
     !(
       GeneralConfig.environment == "dev" ||
       GeneralConfig.environment == "development"
