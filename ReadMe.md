@@ -1,4 +1,4 @@
 # GeoGuessr Clone
 
-Tourist attraction fetching script from assets/scripts/
-Backend architecture:
+UCSBGeoguessr repo is private by request so I had to copy my own work from the backend.
+Currently working polishing up the design
