@@ -5,3 +5,4 @@ cdk.out
 assets/scripts/.venv
 *.json
 *.yaml
+ReadMe.md
