@@ -1,61 +1,23 @@
 ## How to start
 
-### First install AWS CLI
+### Prerequisites
+- [Node.js](https://nodejs.org/)
+- [AWS CLI](https://aws.amazon.com/cli/)
 
-#### - AWS CLI https://aws.amazon.com/cli
-
-**npm global install**
-AWS CLI
-
+### Install
 ```bash
-npm install -g aws-cli
+cd backend && npm install
 ```
 
-AWS CDK
+Requires AWS credentials configured via `aws configure`.
 
-```bash
-npm install -g aws-cdk
+Create a `.env` file in `/backend`:
+
 ```
-
-also install packages in /backend
-
-```bash
-npm install
+ACCOUNT=<your-aws-account-id>
+REGION=us-west-1
+ENVIRONMENT=<environment name>
 ```
-
-Can then check installations
-
-```bash
-aws --version
-cdk --version
-```
-
-### Next need to be an iam user on UCSBGeoguessr account
-
-- Owner (ian) can send an email for that
-
-### Once you become an iam user, copy the AWS Access Key ID and AWS Secret Access Key given to you on sign up
-
-- Now do aws configure, entering the two keys, then us-west-1 for region name, and None or json for output format
-- to verify
-
-```bash
-aws sts get-caller-identity
-```
-
-### Also copy and paste .env for /backend
-
-### Should be able to run cdk commands now (run them in /backend)
-
-# API documentation
-
-- In `/backend/api/openapi.yaml`
--   - Import the file into https://editor.swagger.io/ to get all the api's
-
-# How to contribute
-
-- Add endpoint in `/backend/helpers/config.ts`
-- Add corresponding path as a nested file in `/backend/src`
 
 ## Useful commands
 
@@ -65,3 +27,8 @@ aws sts get-caller-identity
 - `npx cdk deploy` deploy this stack to your default AWS account/region
 - `npx cdk diff` compare deployed stack with current state
 - `npx cdk synth` emits the synthesized CloudFormation template
+
+## Further documentation
+
+- Architecture [docs/architecture.md](../docs/architecture.md)
+- API [docs/openapi.yaml](../docs/openapi.yaml)

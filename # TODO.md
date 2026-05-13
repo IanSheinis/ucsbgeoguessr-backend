@@ -1,12 +1,6 @@
 # TODO
 
-Document ddb architecture decision
-modify lambda function not sending images
-Add warm caching with github actions looping through imgConfig w/ curl
+Modify docs/architecture md
+Add infra and endpoint tests
 
-Arch
-
-- DDB first deletes all, then writes in 25 batches
-- DDB schema
-- Cloudfront origin shield
-- Cloudfront ttl 1 year
+- Add dependency injection to ddb functions to allow mocking

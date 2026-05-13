@@ -1,0 +1,209 @@
+# Import this file into https://editor.swagger.io/ to view the API documentation
+openapi: 3.0.3
+info:
+  title: UCSB GeoGuessr API
+  version: 1.0.0
+  description: |
+    Metadata API for the UCSB GeoGuessr game.
+    Returns image metadata (coordinates, category, image name) for the frontend.
+    Images are served separately via CloudFront CDN.
+  license:
+    name: MIT
+
+paths:
+  /image/random:
+    get:
+      summary: Random image metadata (no exclusions)
+      description: Returns metadata for one random image from the entire collection.
+      tags:
+        - Random Images
+      responses:
+        '200':
+          description: Random image metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageMetadata'
+        '204':
+          description: No images available
+        '500':
+          description: Internal server error
+
+    post:
+      summary: Random image metadata with exclusions
+      description: |
+        Returns metadata for a random image, excluding images in `exclusionList`.
+      tags:
+        - Random Images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                exclusionList:
+                  type: array
+                  items:
+                    type: string
+                  example: ["eiffel_tower.jpg", "colosseum.jpg"]
+              required:
+                - exclusionList
+      responses:
+        '200':
+          description: Random image metadata (not excluded)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageMetadata'
+        '204':
+          description: No images left after exclusions
+        '400':
+          description: Missing exclusionList or invalid JSON
+        '500':
+          description: Internal server error
+
+  /image/category/random:
+    post:
+      summary: Random image metadata from a specific category
+      description: |
+        Returns metadata for a random image in the requested category.
+        Category matching is case-insensitive.
+      tags:
+        - Random Images
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  type: string
+                  example: "landmark"
+                exclusionList:
+                  type: array
+                  items:
+                    type: string
+                  example: ["sagrada_familia.jpg"]
+              required:
+                - category
+                - exclusionList
+      responses:
+        '200':
+          description: Random image metadata from the category
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageMetadata'
+        '204':
+          description: No images left in this category after exclusions
+        '400':
+          description: Missing category or exclusionList, or invalid JSON
+        '500':
+          description: Internal server error
+
+  /image/metadata:
+    post:
+      summary: Get metadata for a specific image
+      description: Returns metadata for the image with the given name.
+      tags:
+        - Metadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                imgName:
+                  type: string
+                  example: "taj_mahal.jpg"
+              required:
+                - imgName
+      responses:
+        '200':
+          description: Image metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageMetadata'
+        '400':
+          description: Missing imgName
+        '500':
+          description: Internal server error
+
+  /image/random/{amount}:
+    get:
+      summary: Get a list of random image names
+      description: Returns a list of random S3 keys based on the specified amount.
+      tags:
+        - Random Images
+      parameters:
+        - name: amount
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Number of random image names to return (must be a positive integer)
+      responses:
+        '200':
+          description: List of random image names
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+                example: ["machu_picchu.jpg", "stonehenge.jpg", "petra.jpg"]
+        '400':
+          description: Invalid or missing amount
+        '500':
+          description: Internal server error
+
+  /{proxy+}:
+    x-amazon-apigateway-any-method:
+      summary: Any undefined route
+      description: |
+        Catches every URL not defined above.
+        Returns 403 when the authorizer is enabled (non-dev environments).
+      parameters:
+        - name: proxy
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '403':
+          description: Missing Authentication Token
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Missing Authentication Token"
+
+components:
+  schemas:
+    ImageMetadata:
+      type: object
+      properties:
+        s3Key:
+          type: string
+          example: "eiffel_tower.jpg"
+        categories:
+          type: array
+          items:
+            type: string
+          example: ["landmark", "europe"]
+        location:
+          type: string
+          example: "Eiffel Tower"
+        latitude:
+          type: number
+          example: 48.8584
+        longitude:
+          type: number
+          example: 2.2945
