@@ -1,5 +1,14 @@
 /**
- * Returns a list of random images given parameter amount
+ * GET /image/random/{amount}
+ *
+ * Returns a list of random S3 keys. Does not return full metadata - use POST /image/metadata to get individual metadata.
+ *
+ * Path params: amount (positive integer)
+ *
+ * Responses:
+ *   200 - string[] of S3 keys
+ *   400 - Missing or non-positive amount
+ *   500 - Internal error
  */
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import ResponseHandler from '../../../utils/apigw_format';

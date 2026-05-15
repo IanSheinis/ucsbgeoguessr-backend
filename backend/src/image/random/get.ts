@@ -1,5 +1,13 @@
 /**
- * Retrieve a random image from the s3 bucket, no exclusion implemented here
+ * GET /image/random
+ *
+ * Returns metadata for one random image from the entire collection.
+ * Uses the 'all' category index and a random offset to avoid a full table scan.
+ *
+ * Responses:
+ *   200 - ImageMetadata
+ *   400 - No image available at selected index
+ *   500 - Internal error (missing config or 'all' category row)
  */
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import ResponseHandler from '../../utils/apigw_format';

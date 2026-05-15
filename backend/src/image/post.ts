@@ -1,5 +1,14 @@
 /**
- * Retrieve image metadata based on query parameter
+ * POST /image/metadata
+ *
+ * Returns metadata for a specific image by name.
+ *
+ * Body: { imgName: string }
+ *
+ * Responses:
+ *   200 - ImageMetadata (s3Key, categories, location, latitude, longitude)
+ *   400 - Missing imgName or invalid JSON
+ *   500 - Internal error
  */
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import ResponseHandler, { parseEventBody } from '../utils/apigw_format';

@@ -10,7 +10,7 @@ import LambdaBuilder from '../helpers/lambdaBuilder';
 /**
  * Api Stack
  *
- * Recursive endpoint creating endpoint infra using /src api logc:
+ * Iterative endpoint creating endpoint infra using /src api logc:
  *  - Lambda function
  *  - APIGW resource
  *  - APIGW method request/response
@@ -147,27 +147,8 @@ export class ApiStack extends cdk.Stack {
         // Look up resource from parent API (resources are still in parent stack to avoid hierarchy issues)
         const resource = this.api.root.resourceForPath(config.path);
 
-        let chosenValidator: apigateway.IRequestValidator | undefined;
-        if (config.validators && config.validator) {
-            switch (config.validator) {
-                case 'body':
-                    chosenValidator = config.validators?.bodyOnlyValidator;
-                    break;
-                case 'params':
-                    chosenValidator = config.validators?.paramsOnlyValidator;
-                    break;
-                case 'bodyAndParams':
-                    chosenValidator = config.validators?.bodyAndParamsValidator;
-                    break;
-            }
-        }
-
         const methodOptions: apigateway.MethodOptions = {
             // Create method response settings
-            // requestParameters,
-
-            // Request validator
-            requestValidator: chosenValidator,
 
             // Declare CORS headers for all status codes (required for Lambda proxy integration)
             // Without this, API Gateway won't pass through CORS headers from Lambda responses

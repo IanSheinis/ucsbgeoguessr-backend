@@ -1,6 +1,4 @@
 import * as cdk from 'aws-cdk-lib';
-import { aws_apigateway as apigw } from 'aws-cdk-lib';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { Duration } from 'aws-cdk-lib';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as s3 from 'aws-cdk-lib/aws-s3';
@@ -42,8 +40,6 @@ export interface LambdaBuilderConfig {
     readonly runtime?: string;
     readonly runtimeProperty?: lambda.Runtime;
     readonly handler?: string;
-    readonly systemLogLevel?: 'INFO' | 'DEBUG' | 'WARN';
-    readonly applicationLogLevel?: 'INFO' | 'DEBUG' | 'WARN' | 'TRACE' | 'ERROR' | 'FATAL';
     readonly timeout?: Duration;
     readonly nodeModules?: string[];
     /**
@@ -51,12 +47,6 @@ export interface LambdaBuilderConfig {
      * Default: 256MB. Recommended for critical endpoints: 512-1024MB.
      */
     readonly memorySize?: number;
-    /**
-     * Number of provisioned concurrent executions.
-     * Set this for critical endpoints to eliminate cold starts entirely.
-     * Note: This incurs additional cost but eliminates cold start latency.
-     */
-    readonly provisionedConcurrency?: number;
 }
 export interface LambdaEnvVariables {
     // Almost same config as in src_ts/utils/types
@@ -72,17 +62,8 @@ export interface LambdaEnvVariables {
 export interface EndpointConfig {
     readonly path: string;
     readonly httpMethod: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH' | 'OPTIONS' | 'HEAD' | 'ANY';
-    readonly pathParameterRequired: boolean;
     readonly lambdaBuilderConfig: LambdaBuilderConfig;
-    readonly sharedLambdaKey?: string;
-    validator?: 'body' | 'params' | 'bodyAndParams';
-    readonly additionalEnv?: Record<string, string>;
-    readonly disableAuth?: boolean;
-    readonly validators?: {
-        bodyOnlyValidator: apigw.IRequestValidator;
-        paramsOnlyValidator: apigw.IRequestValidator;
-        bodyAndParamsValidator: apigw.IRequestValidator;
-    };
+    readonly sharedLambdaKey?: string; // Used to tell if using an existing lambda
 
     // Permission list for resources, add to this when there is a new resource (MAKE SURE TO ADD LOGIC IN API-STACK.TS GETORCREATE FUNCTION)
     readonly readImageBucket?: boolean;
@@ -96,9 +77,7 @@ export interface ApiStackConfig extends cdk.StackProps, CommonConfigType {
     readonly defaultRuntimeProperty: lambda.Runtime;
     readonly defaultHandler: string;
     readonly defaultSystemLogLevel: 'INFO' | 'DEBUG' | 'WARN'; // lambda.SystemLogLevel
-    readonly authorizerEnable: boolean;
     readonly defaultApplicationLogLevel: 'INFO' | 'DEBUG' | 'WARN' | 'TRACE' | 'ERROR' | 'FATAL'; //lambda.ApplicationLogLevel
-    vpc?: ec2.IVpc;
     readonly endpointConfig: EndpointConfig[];
     readonly imageBucket?: s3.IBucket;
     readonly metadataTable?: TableV2;

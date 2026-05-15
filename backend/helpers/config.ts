@@ -1,3 +1,7 @@
+/**
+ * CDK stack configuration and API endpoint definitions.
+ * Reads from environment variables with sensible defaults for local dev.
+ */
 import path from 'path';
 import { logger } from '../logger';
 import {
@@ -76,7 +80,6 @@ export const endpointList: EndpointConfig[] = [
             fileName: 'image/random/get.ts',
             memorySize: 512, // Increased from 256MB for faster execution
         },
-        pathParameterRequired: false,
         readMetadataTable: true,
     },
     {
@@ -87,7 +90,6 @@ export const endpointList: EndpointConfig[] = [
             fileName: 'image/post.ts',
             memorySize: 512, // Increased from 256MB for faster execution
         },
-        pathParameterRequired: true,
         readMetadataTable: true,
     },
     {
@@ -98,7 +100,6 @@ export const endpointList: EndpointConfig[] = [
             fileName: '/image/random/{amount}/get.ts',
             memorySize: 512, // Increased from 256MB for faster execution
         },
-        pathParameterRequired: true,
         readMetadataTable: true,
     },
     {
@@ -109,7 +110,6 @@ export const endpointList: EndpointConfig[] = [
             fileName: 'image/random/post.ts',
             memorySize: 512, // Increased from 256MB for faster execution
         },
-        pathParameterRequired: false,
         readMetadataTable: true,
     },
     {
@@ -120,7 +120,6 @@ export const endpointList: EndpointConfig[] = [
             fileName: 'image/category/random/post.ts',
             memorySize: 512, // Increased from 256MB for faster execution
         },
-        pathParameterRequired: false,
         readMetadataTable: true,
     },
 ];
@@ -137,10 +136,6 @@ export const ApiConfig: ApiStackConfig = {
     defaultHandler: 'handler',
     defaultSystemLogLevel: 'INFO', // log level of os
     defaultApplicationLogLevel: checkLogEnv(getOptionalEnv('LOG_LEVEL', 'INFO')), // default to INFO for dev
-    //TODO enable authorizer
-    authorizerEnable:
-        !(GeneralConfig.environment === 'dev' || GeneralConfig.environment === 'development') ||
-        getOptionalEnv('AUTHORIZER', 'false').toLowerCase() !== 'false', // enable authorizer unless explicitly false in dev
 
     endpointConfig: endpointList,
 };

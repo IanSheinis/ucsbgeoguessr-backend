@@ -1,6 +1,18 @@
 /**
- * Retrieve a random image from the s3 bucket, exclusion is implemented here
+ * POST /image/random
+ *
+ * Returns a random image's metadata, excluding previously seen images.
+ * Fetches all S3 keys, filters out exclusions, then retrieves metadata for a random remaining key.
+ *
+ * Body: { exclusionList: string[] }
+ *
+ * Responses:
+ *   200 - ImageMetadata
+ *   204 - No images remaining after exclusions
+ *   400 - Missing exclusionList or invalid JSON
+ *   500 - Internal error
  */
+
 import { APIGatewayProxyEvent, APIGatewayProxyResult, Context } from 'aws-lambda';
 import ResponseHandler, { parseEventBody } from '../../utils/apigw_format';
 import readConfig from '../../utils/config';
@@ -14,16 +26,6 @@ const config = readConfig();
 const client = new DynamoDBClient({ region: config.REGION });
 const docClient = DynamoDBDocumentClient.from(client);
 
-/**
- * JSON example
- * {
- *  "exclusionList" : ["image.jpg","image2.jpg"] // Case sensitive
- * }
- * returns 200 w/ an image upon success
- * returns 204 if no images
- * returns 400 if bad request
- * returns 500 if internal server error
- */
 export const handler = async (
     event: APIGatewayProxyEvent,
     _context: Context,

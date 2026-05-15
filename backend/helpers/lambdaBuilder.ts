@@ -4,21 +4,24 @@ import { Construct } from 'constructs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { ICommandHooks, NodejsFunction, NodejsFunctionProps } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import { LambdaBuilderConfig, LambdaEnvVariables } from './types';
 import { ApiConfig } from './config';
-import * as layers from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 
 type Mutable<T> = {
     -readonly [P in keyof T]: T[P];
 };
 
+/**
+ * Lambda builder utility using the fluent/builder pattern for constructing NodejsFunctions.
+ * Based on https://github.com/TomorrowTechReviews/aws-cdk-ts
+ *
+ * Original code MIT License, Copyright (c) 2024 Tomorrow Tech Reviews
+ * See LICENSE-third-party or the original repo for full license text.
+ */
 export default class LambdaBuilder {
     private props: Mutable<NodejsFunctionProps>;
     private entry: string;
-    private sharedLayer?: layers.ILayerVersion;
-    private extraLayers: layers.ILayerVersion[] = [];
 
     constructor(
         private scope: Construct,
@@ -68,20 +71,6 @@ export default class LambdaBuilder {
         return this;
     }
 
-    setSharedLayer(layer: layers.ILayerVersion) {
-        if (this.sharedLayer === layer) {
-            return this;
-        }
-        this.sharedLayer = layer;
-        const existingLayers = this.props.layers ?? [];
-        if (!existingLayers.includes(layer)) {
-            this.props.layers = [layer, ...existingLayers];
-        } else {
-            this.props.layers = existingLayers;
-        }
-        return this;
-    }
-
     setEnv(env: LambdaEnvVariables) {
         this.props.environment = env as unknown as { [key: string]: string }; // Typescript is being very strict with conversions
         return this;
@@ -115,21 +104,8 @@ export default class LambdaBuilder {
         return this;
     }
 
-    addLayers(layerOrLayers: layers.ILayerVersion | layers.ILayerVersion[]) {
-        const arr = Array.isArray(layerOrLayers) ? layerOrLayers : [layerOrLayers];
-        this.extraLayers.push(...arr);
-        this.props.layers = [...(this.props.layers ?? []), ...arr];
-        return this;
-    }
-
     addPolicy(policy: iam.PolicyStatement) {
         this.props.initialPolicy?.push(policy);
-        return this;
-    }
-
-    connectVPC(vpc: ec2.IVpc, ...groups: ec2.ISecurityGroup[]) {
-        this.props.securityGroups = groups;
-        this.props.vpc = vpc;
         return this;
     }
 
