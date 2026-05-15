@@ -17,11 +17,12 @@ import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { queryByCategoryIndex, queryCategory, queryMetadata } from '../../utils/ddb_helper';
 import { aggregateMetadata } from '../../utils/helpers';
 import { MetadataRow } from '../../utils/types';
+import { getLogger } from '../../utils/logger';
 
 const config = readConfig();
 const client = new DynamoDBClient({ region: config.REGION });
 const docClient = DynamoDBDocumentClient.from(client);
-
+const logger = getLogger();
 /**
  * returns 200 w/ an image upon success
  * returns 204 if no images
@@ -36,34 +37,37 @@ export const handler = async (
         const tableName = config.METADATA_TABLE_NAME;
 
         if (!tableName) {
-            console.error('Missing bucket table environment variable');
+            logger.error('Missing bucket table environment variable');
             return ResponseHandler.internalServerError();
         }
 
         // Row with 'all' s3Key
         const allCategoryRow = await queryCategory('all', tableName, docClient);
         if (!allCategoryRow.length) {
-            console.error('Could not find all category');
+            logger.error('Could not find all category');
             return ResponseHandler.internalServerError();
         }
 
         const allSize = allCategoryRow[0].size;
 
         const randomIndex = Math.floor(Math.random() * allSize);
+        logger.debug(`Random index selected: ${randomIndex} out of ${allSize}`);
+
         const s3Key = await queryByCategoryIndex('all', randomIndex, tableName, docClient);
         if (!s3Key) {
             return ResponseHandler.badRequest('No image available');
         }
+        logger.debug(`Selected s3Key: ${s3Key}`);
 
         const metadataRaw = await queryMetadata(s3Key, tableName, docClient);
         if (!metadataRaw) {
-            console.error('metadataRaw was null for S3key: ', s3Key);
+            logger.error('metadataRaw was null for S3key: ', s3Key);
             return ResponseHandler.internalServerError(); // This shouldn't happen
         }
         const metadata = aggregateMetadata(metadataRaw as MetadataRow[]);
         return ResponseHandler.success(metadata);
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         return ResponseHandler.internalServerError();
     }
 };

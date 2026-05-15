@@ -18,10 +18,12 @@ import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { queryMetadata } from '../utils/ddb_helper';
 import { aggregateMetadata } from '../utils/helpers';
 import { MetadataRow } from '../utils/types';
+import { getLogger } from '../utils/logger';
 
 const config = readConfig();
 const client = new DynamoDBClient({ region: config.REGION });
 const docClient = DynamoDBDocumentClient.from(client);
+const logger = getLogger();
 
 export const handler = async (
     event: APIGatewayProxyEvent,
@@ -33,7 +35,7 @@ export const handler = async (
     try {
         body = parseEventBody(event);
     } catch (parseError) {
-        console.error('Failed to parse request body', parseError);
+        logger.error('Failed to parse request body', parseError);
         return ResponseHandler.badRequest('JSON syntax error');
     }
     try {
@@ -46,19 +48,21 @@ export const handler = async (
         const tableName = config.METADATA_TABLE_NAME;
 
         if (!tableName) {
-            console.error('Missing bucket table environment variable');
+            logger.error('Missing bucket table environment variable');
             return ResponseHandler.internalServerError();
         }
 
+        logger.debug(`Looking up metadata for imgName: ${imgName}`);
+
         const metadataRaw = await queryMetadata(imgName, tableName, docClient);
         if (!metadataRaw) {
-            console.error('metadataRaw was null for S3key: ', imgName);
+            logger.error('metadataRaw was null for S3key: ', imgName);
             return ResponseHandler.internalServerError(); // This shouldn't happen
         }
         const metadata = aggregateMetadata(metadataRaw as MetadataRow[]);
         return ResponseHandler.success(metadata);
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         return ResponseHandler.internalServerError();
     }
 };

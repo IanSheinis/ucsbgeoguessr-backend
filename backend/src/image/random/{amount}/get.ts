@@ -17,10 +17,12 @@ import { getRandomElements } from '../../../utils/helpers';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { queryAllS3Keys } from '../../../utils/ddb_helper';
+import { getLogger } from '../../../utils/logger';
 
 const config = readConfig();
 const client = new DynamoDBClient({ region: config.REGION });
 const docClient = DynamoDBDocumentClient.from(client);
+const logger = getLogger();
 
 export const handler = async (
     event: APIGatewayProxyEvent,
@@ -30,7 +32,7 @@ export const handler = async (
         const tableName = config.METADATA_TABLE_NAME;
 
         if (!tableName) {
-            console.error('Missing bucket table environment variable');
+            logger.error('Missing bucket table environment variable');
             return ResponseHandler.internalServerError();
         }
 
@@ -48,10 +50,12 @@ export const handler = async (
         // Return a list of all objects
         const allObjects = await queryAllS3Keys([], tableName, docClient);
 
+        logger.debug(`Requested amount: ${amount}, total available: ${allObjects.length}`);
+
         const randomObjects: string[] = getRandomElements(allObjects, amount);
         return ResponseHandler.success(randomObjects);
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         return ResponseHandler.internalServerError();
     }
 };

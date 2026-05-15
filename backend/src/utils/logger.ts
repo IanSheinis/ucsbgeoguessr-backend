@@ -13,7 +13,6 @@ export function getLogger(): winston.Logger {
             return info;
         });
 
-        console.log(`Winston log level: ${config.LOG_LEVEL}`);
         loggerInstance = winston.createLogger({
             level: config.LOG_LEVEL,
             format: combine(timestamp(), errors({ stack: true }), correlation(), json()),

@@ -21,10 +21,12 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { queryAllS3Keys, queryMetadata } from '../../utils/ddb_helper';
 import { MetadataRow } from '../../utils/types';
+import { getLogger } from '../../utils/logger';
 
 const config = readConfig();
 const client = new DynamoDBClient({ region: config.REGION });
 const docClient = DynamoDBDocumentClient.from(client);
+const logger = getLogger();
 
 export const handler = async (
     event: APIGatewayProxyEvent,
@@ -36,13 +38,11 @@ export const handler = async (
     try {
         body = parseEventBody(event);
     } catch (parseError) {
-        console.error('Failed to parse request body', parseError);
+        logger.error('Failed to parse request body', parseError);
         return ResponseHandler.badRequest('Invalid JSON in request body');
     }
     try {
         const { exclusionList } = body;
-
-        console.log('body: ' + JSON.stringify(body));
 
         if (exclusionList === undefined) {
             return ResponseHandler.badRequest("Missing 'exclusionList' query parameter");
@@ -51,29 +51,33 @@ export const handler = async (
         const tableName = config.METADATA_TABLE_NAME;
 
         if (!tableName) {
-            console.error('Missing bucket table environment variable');
+            logger.error('Missing bucket table environment variable');
             return ResponseHandler.internalServerError();
         }
+
+        logger.debug(`Exclusion list: ${JSON.stringify(exclusionList)}`);
 
         // Return remaining s3key after excluding the exclusion list
         const remainingS3Keys = await queryAllS3Keys(exclusionList, tableName, docClient);
         if (remainingS3Keys.length === 0) {
             // If everything is excluded or no images return 204
+            logger.debug('No images remaining after exclusions');
             return ResponseHandler.success('', 204);
         }
 
         const s3Key: string = getRandomElement<string>(remainingS3Keys)!; // Null assertion b/c remainingObjects is non-empty
+        logger.debug(`Selected s3Key: ${s3Key} from ${remainingS3Keys.length} remaining`);
 
         const metadataRaw = await queryMetadata(s3Key, tableName, docClient);
         if (!metadataRaw) {
-            console.error('metadataRaw was null for S3key: ', s3Key);
+            logger.error('metadataRaw was null for S3key: ', s3Key);
             return ResponseHandler.internalServerError(); // This shouldn't happen
         }
         const metadata = aggregateMetadata(metadataRaw as MetadataRow[]);
 
         return ResponseHandler.success(metadata);
     } catch (e) {
-        console.error(e);
+        logger.error(e);
         return ResponseHandler.internalServerError();
     }
 };

@@ -20,10 +20,12 @@ import readConfig from '../../../utils/config';
 import { aggregateMetadata, getRandomElement } from '../../../utils/helpers';
 import { queryAllS3Keys, queryMetadata } from '../../../utils/ddb_helper';
 import { MetadataRow } from '../../../utils/types';
+import { getLogger } from '../../../utils/logger';
 
 const config = readConfig();
 const client = new DynamoDBClient({ region: config.REGION });
 const docClient = DynamoDBDocumentClient.from(client);
+const logger = getLogger();
 
 export const handler = async (
     event: APIGatewayProxyEvent,
@@ -35,13 +37,11 @@ export const handler = async (
     try {
         body = parseEventBody(event);
     } catch (parseError) {
-        console.error('Failed to parse request body', parseError);
+        logger.error('Failed to parse request body', parseError);
         return ResponseHandler.badRequest('JSON syntax error');
     }
     try {
         const { category, exclusionList } = body;
-
-        console.log('body: ' + JSON.stringify(body));
 
         if (!category) {
             return ResponseHandler.badRequest("Missing 'category' query parameter");
@@ -58,6 +58,8 @@ export const handler = async (
             return ResponseHandler.internalServerError('Table name not configured');
         }
 
+        logger.debug(`Category: ${categoryLower}, exclusion list ${exclusionList}`);
+
         const remainingS3Keys = await queryAllS3Keys(
             exclusionList,
             tableName,
@@ -72,15 +74,17 @@ export const handler = async (
 
         const randomS3Key: string = getRandomElement(remainingS3Keys)!; // Null assertion b/c remainingObjects is non-empty
 
+        logger.debug(`Selected s3Key: ${randomS3Key} from ${remainingS3Keys.length} remaining`);
+
         const metadataRaw = await queryMetadata(randomS3Key, tableName, docClient);
         if (!metadataRaw) {
-            console.error('metadataRaw was null for S3key: ', randomS3Key);
+            logger.error('metadataRaw was null for S3key: ', randomS3Key);
             return ResponseHandler.internalServerError(); // This shouldn't happen
         }
         const metadata = aggregateMetadata(metadataRaw as MetadataRow[]);
         return ResponseHandler.success(metadata);
     } catch (error) {
-        console.error(error);
+        logger.error(error);
         return ResponseHandler.internalServerError();
     }
 };

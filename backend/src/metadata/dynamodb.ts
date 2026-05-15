@@ -29,16 +29,19 @@ import { DynamoDBDocumentClient, BatchWriteCommand, paginateScan } from '@aws-sd
 import imgConfig from '../../../assets/metadata/images.json';
 import readConfig from '../utils/config';
 import { chunkArray } from '../utils/helpers';
-
+import { getLogger } from '../../logger';
 const config = readConfig();
 const client = new DynamoDBClient({ region: config.REGION });
 const docClient = DynamoDBDocumentClient.from(client);
+const logger = getLogger();
 
 /**
  * Deletes everything in DDB
  * Adapted from: https://gist.github.com/mikebroberts/8737179a92f6e11494a02781329e1a11
  */
 export async function deleteAllItemsInTable(tableName: string, keyFields: string[]) {
+    logger.info(`Deleting all items from table: ${tableName}`);
+    let deletedCount = 0;
     // Loop through and paginate deletes
     for await (const page of paginateScan(
         { client: docClient, pageSize: 25 },
@@ -59,29 +62,30 @@ export async function deleteAllItemsInTable(tableName: string, keyFields: string
                     },
                 }),
             );
+            deletedCount += items.length;
         }
     }
+    logger.info(`Deleted ${deletedCount} items from table`);
 }
 
 export const handler = async () => {
     const tableName = config.METADATA_TABLE_NAME;
 
     if (!tableName) {
-        console.error('Missing configuration');
+        logger.error('Missing tableName');
         return { error: 'Missing bucket table vars' };
     }
+
+    if (!imgConfig) {
+        logger.error('images.json config is empty');
+        return { error: 'Empty config' };
+    }
+
+    logger.info('Starting metadata table rebuild');
 
     // Erase all rows
     await deleteAllItemsInTable(tableName, ['s3Key', 'category']);
 
-    if (!imgConfig) {
-        console.log('err: config is empty');
-    }
-
-    if (config.METADATA_TABLE_NAME === undefined) {
-        console.log('err: bucket table name undefined');
-        return;
-    }
     const rows = [];
     const imgCountMap: Record<string, number> = {};
 
@@ -115,8 +119,14 @@ export const handler = async () => {
         rows.push(row);
     });
 
+    logger.info(
+        `Built ${rows.length} rows from ${imgConfig.length} images across ${Object.keys(imgCountMap).length} categories`,
+    );
+
     // Splits array into 25 elements (batchwritecommand max)
     const imgChunks = chunkArray(rows, 25);
+
+    let writtenChunks = 0;
 
     // For every chunk of 25 images, make one BatchWrite request.
     for (const chunk of imgChunks) {
@@ -128,12 +138,16 @@ export const handler = async () => {
 
         const command = new BatchWriteCommand({
             RequestItems: {
-                [config.METADATA_TABLE_NAME]: putRequests,
+                [tableName]: putRequests,
             },
         });
 
         await docClient.send(command);
+        writtenChunks++;
     }
+
+    logger.info(`Wrote ${writtenChunks} batches to ${tableName}`);
+    logger.debug(`Category breakdown: ${JSON.stringify(imgCountMap)}`);
 
     return { totalCount: imgCountMap['all'] };
 };
